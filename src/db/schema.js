@@ -16,7 +16,7 @@ db.version(6).stores({
   ceklok_settings: 'key',
 
   // Merged umkm_marketplace stores (from Dexie)
-  categories: 'id, name',
+  categories: '++id, name',
   products: '++id, name, price, stock, categoryId, featured',
   capitalCosts: '++id, createdAt, name, amount',
   debts: '++id, createdAt, name, amount, dueDate',

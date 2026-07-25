@@ -230,17 +230,17 @@ import { ReminderRepository, getNextOccurrence, daysUntil } from '@/db/reminderR
 const STORAGE_KEY = 'home_menu_settings'
 
 const ALL_MENU = [
-  { name: 'To Do', path: '/todo-personal', icon: checkboxOutline, count: 0, description: 'Tugas pribadi', accent: '#3b82f6', visible: true },
-  { name: 'To Do Team', path: '/todo', icon: checkboxOutline, count: 0, description: 'Kerja tim', accent: '#8b5cf6', visible: true },
-  { name: 'Buku Kas', path: '/buku_kas', icon: documentTextOutline, count: 0, description: 'Bisnis, hobi & renovasi', accent: '#10b981', visible: true },
-  { name: 'Ceklok', path: '/ceklok', icon: timeOutline, count: 0, description: 'Presensi kerja', accent: '#06b6d4', visible: true },
-  { name: 'Pengingat', path: '/reminders', icon: alarmOutline, count: 0, description: 'Hari penting', accent: '#f59e0b', visible: true },
-  { name: 'Pengeluaran', path: '/expenses', icon: cashOutline, count: 0, description: 'Keluar dana', accent: '#f59e0b', visible: true },
-  { name: 'Kasir (POS)', path: '/cashier', icon: cartOutline, count: 0, description: 'Penjualan & Kasir', accent: '#059669', visible: true },
-  { name: 'Tabungan', path: '/savings', icon: walletOutline, count: 0, description: 'Modal usaha', accent: '#d97706', visible: true },
-  { name: 'Produk', path: '/products', icon: basketOutline, count: 0, description: 'Stok produk', accent: '#ef4444', visible: true },
-  { name: 'Manajemen Stok', path: '/stock', icon: layersOutline, count: 0, description: 'Monitor & atur stok', accent: '#a855f7', visible: true },
-  { name: 'Tentang Aplikasi', path: '/about', icon: informationCircleOutline, description: 'Tentang & Developer', accent: '#0ea5e9', visible: true },
+  { name: 'To Do', path: '/todo-personal', icon: checkboxOutline, count: 0, description: 'Tugas pribadi', accent: 'var(--color-blue)', visible: true },
+  { name: 'To Do Team', path: '/todo', icon: checkboxOutline, count: 0, description: 'Kerja tim', accent: 'var(--color-purple)', visible: true },
+  { name: 'Buku Kas', path: '/buku_kas', icon: documentTextOutline, count: 0, description: 'Bisnis, hobi & renovasi', accent: 'var(--color-green)', visible: true },
+  { name: 'Ceklok', path: '/ceklok', icon: timeOutline, count: 0, description: 'Presensi kerja', accent: 'var(--color-cyan)', visible: true },
+  { name: 'Pengingat', path: '/reminders', icon: alarmOutline, count: 0, description: 'Hari penting', accent: 'var(--color-amber)', visible: true },
+  { name: 'Pengeluaran', path: '/expenses', icon: cashOutline, count: 0, description: 'Keluar dana', accent: 'var(--color-orange)', visible: true },
+  { name: 'Kasir (POS)', path: '/cashier', icon: cartOutline, count: 0, description: 'Penjualan & Kasir', accent: 'var(--color-emerald)', visible: true },
+  { name: 'Tabungan', path: '/savings', icon: walletOutline, count: 0, description: 'Simpanan dana', accent: 'var(--color-yellow)', visible: true },
+  { name: 'Produk', path: '/products', icon: basketOutline, count: 0, description: 'Stok produk', accent: 'var(--color-red)', visible: true },
+  { name: 'Manajemen Stok', path: '/stock', icon: layersOutline, count: 0, description: 'Monitor & atur stok', accent: 'var(--color-indigo)', visible: true },
+  { name: 'Tentang Aplikasi', path: '/about', icon: informationCircleOutline, description: 'Tentang & Developer', accent: 'var(--color-sky)', visible: true },
 ]
 
 export default {
@@ -376,14 +376,14 @@ export default {
         const allReminders = await ReminderRepository.getAll().catch(() => [])
         updateCount('/reminders', allReminders.length)
 
-        const { savingsRepo, ProductRepository, salesRepo, expensesRepo } = await import('../db/repositories')
-        updateCount('/expenses', (await expensesRepo.getAll()).length)
+        const { savingAccountsRepo, ProductRepository, salesRepo, expensesRepo } = await import('../db/repositories')
 
         const allProducts = await ProductRepository.getAll()
-        const lowStockItems = allProducts.filter(p => p.stock <= 5)
+        const lowStockItems = allProducts.filter(p => p.stock !== null && p.stock !== undefined && p.stock <= 10)
 
         updateCount('/cashier', (await salesRepo.getAll()).length)
-        updateCount('/savings', (await savingsRepo.getAll()).length)
+        updateCount('/savings', (await savingAccountsRepo.getAll()).length)
+        updateCount('/expenses', (await expensesRepo.getAll()).length)
         updateCount('/products', allProducts.length)
         updateCount('/stock', lowStockItems.length)
       } catch (e) {
@@ -553,11 +553,12 @@ export default {
 
 .reminder-modal-hero {
   padding: 20px 18px 16px;
-  background:
+  background: #3b82f6;
+  /* background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 34%),
-    linear-gradient(135deg, #0f766e 0%, #2563eb 54%, #7c3aed 100%);
+    linear-gradient(135deg, #0f766e 0%, #2563eb 54%, #7c3aed 100%); */
   color: white;
-  border-radius: 0 0 24px 24px;
+  border-radius: 28px 28px 0 0;
   box-shadow: 0 10px 30px rgba(37, 99, 235, 0.22);
 }
 
