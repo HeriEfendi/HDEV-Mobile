@@ -117,7 +117,7 @@
                 <ion-card-content class="container-padded">
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold text-dark mb-0">Pengeluaran Harian Minggu Ini</h6>
-                    <span class="badge bg-light text-muted border small">{{ currentWeekRange }}</span>
+                    <span class="badge bg-light text-muted border small">Minggu Ini</span>
                   </div>
                   <VueApexCharts v-if="dailyChartSeries[0].data.some(d => d > 0)" :key="'daily-' + expenses.length" type="bar" height="240" :options="dailyChartOptions" :series="dailyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data harian.</div>
@@ -129,7 +129,7 @@
                 <ion-card-content class="container-padded">
                   <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold text-dark mb-0">Trend Pengeluaran Mingguan</h6>
-                    <span class="badge bg-light text-muted border small">{{ weeklyRange }}</span>
+                    <span class="badge bg-light text-muted border small">5 Minggu Terakhir</span>
                   </div>
                   <VueApexCharts v-if="weeklyChartSeries[0].data.some(d => d > 0)" :key="'weekly-' + expenses.length" type="area" height="240" :options="weeklyChartOptions" :series="weeklyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data grafik mingguan.</div>
@@ -140,8 +140,8 @@
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
                   <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold text-dark mb-0">Trend Pengeluaran 6 Bulan</h6>
-                    <span class="badge bg-light text-muted border small">{{ sixMonthRange }}</span>
+                    <h6 class="fw-bold text-dark mb-0">Trend Pengeluaran Bulanan</h6>
+                    <span class="badge bg-light text-muted border small">6 Bulan Terakhir</span>
                   </div>
                   <VueApexCharts v-if="monthlyChartSeries[0].data.some(d => d > 0)" :key="'monthly-' + expenses.length" type="area" height="240" :options="monthlyChartOptions" :series="monthlyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data bulanan.</div>
@@ -152,11 +152,18 @@
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
                   <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold text-dark mb-0">Porsi Kategori 6 Bulan Terakhir</h6>
-                    <span class="badge bg-light text-muted border small">{{ sixMonthRange }}</span>
+                    <h6 class="fw-bold text-dark mb-0">Porsi Kategori</h6>
+                    <select v-model="categoryPeriodMonths" @change.prevent style="outline: none !important; box-shadow: none !important;" class="form-select app-control app-control-sm w-auto">
+                      <option :value="1">1 Bulan</option>
+                      <option :value="3">3 Bulan</option>
+                      <option :value="6">6 Bulan</option>
+                      <option :value="12">1 Tahun</option>
+                    </select>
                   </div>
-                  <VueApexCharts v-if="donutSeries.length > 0 && donutSeries.some(d => d > 0)" :key="'donut-' + donutSeries.length" type="donut" height="240" :options="donutOptions" :series="donutSeries" />
-                  <div v-else class="text-center py-5 text-muted">Belum ada pengeluaran dalam enam bulan terakhir untuk dianalisa.</div>
+                  <div style="min-height: 240px;" class="d-flex flex-column justify-content-center">
+                    <VueApexCharts v-if="donutSeries.length > 0 && donutSeries.some(d => d > 0)" :key="'donut-' + donutSeries.length" type="donut" height="240" :options="donutOptions" :series="donutSeries" />
+                    <div v-else class="text-center py-5 text-muted">Belum ada pengeluaran dalam {{ categoryPeriodMonths }} bulan terakhir untuk dianalisa.</div>
+                  </div>
                 </ion-card-content>
               </ion-card>
             </ion-col>
@@ -241,6 +248,7 @@ export default {
     const expenses = ref([])
     const accounts = ref([])
     const budget = ref(3000000) // Default budget limit: Rp 3.000.000
+    const categoryPeriodMonths = ref(6)
     const budgetCategories = ref([])
     const editingBudget = ref(false)
     const budgetDraft = ref(null)
@@ -372,27 +380,14 @@ export default {
       return result.sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
-     // Donut Chart logic: six months
-     const sixMonthStart = () => {
+     // Donut Chart logic: dynamic months
+     const periodStart = (months) => {
        const now = new Date()
-       return new Date(now.getFullYear(), now.getMonth() - 5, 1)
+       return new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
      }
 
-     const formatPeriod = (start, end) => `${start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`
-     const sixMonthRange = computed(() => formatPeriod(sixMonthStart(), new Date()))
-     const currentWeekRange = computed(() => {
-       const today = new Date(); today.setHours(0, 0, 0, 0)
-       const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() || 7) - 1))
-       return formatPeriod(monday, new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6))
-     })
-     const weeklyRange = computed(() => {
-       const start = sixMonthStart(); const end = new Date();
-       const weeklyStart = new Date(end); weeklyStart.setDate(end.getDate() - 34)
-       return formatPeriod(weeklyStart < start ? start : weeklyStart, end)
-     })
-
      const categoryTotals = computed(() => {
-       const start = sixMonthStart()
+       const start = periodStart(categoryPeriodMonths.value)
        const currentExpenses = expenses.value.filter(e => new Date(e.date) >= start)
        const totals = {}
        for (const e of currentExpenses) {
@@ -530,7 +525,7 @@ export default {
       donutSeries, donutOptions, accounts, getAccountName, filterSearch,
       filterCategory, filterAccount, allCategories, filteredExpenses,
       dailyChartSeries, dailyChartOptions, monthlyChartSeries, monthlyChartOptions,
-      sixMonthRange, currentWeekRange, weeklyRange
+      categoryPeriodMonths
     }
   }
 }
