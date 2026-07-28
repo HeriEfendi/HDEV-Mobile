@@ -1,58 +1,135 @@
 <template>
-  <ion-page>
-    <ion-header>
-      <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button default-href="/dashboard" />
-        </ion-buttons>
-        <ion-title>Daftar Utang</ion-title>
-        <ion-buttons slot="end">
-          <ion-button router-link="/debts/create">
-            <ion-icon slot="icon-only" :icon="addOutline" />
-          </ion-button>
-        </ion-buttons>
+  <ion-page class="app-page">
+    <ion-header class="app-header">
+      <ion-toolbar class="app-toolbar">
+        <div class="app-hero">
+          <div class="d-flex align-items-center justify-content-between">
+            <ion-title class="app-hero-title">Utang</ion-title>
+            <ion-buttons slot="end">
+              <ion-button class="btn-action primary" @click="openModal()">
+                <ion-icon slot="start" :icon="addOutline" /> Tambah
+              </ion-button>
+            </ion-buttons>
+          </div>
+          <p class="app-hero-subtitle">Kelola utang dan kewajiban pembayaran Anda.</p>
+        </div>
       </ion-toolbar>
+      <div class="px-3 pb-3">
+        <ion-segment v-model="activeTab" class="custom-segment">
+          <ion-segment-button value="dashboard">
+            <ion-label>Dashboard</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="riwayat">
+            <ion-label>Riwayat & Detail</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
     </ion-header>
 
-    <ion-content>
-      <ion-list>
-        <ion-item v-for="debt in debts" :key="debt.id">
-          <ion-label>
-            <h2>{{ debt.lender }}</h2>
-            <p>{{ formatDate(debt.dueDate) }}</p>
-          </ion-label>
-          <div slot="end" class="d-flex flex-column align-items-end">
-            <ion-note color="danger">{{ formatPrice(debt.amount) }}</ion-note>
-            <ion-badge :color="debt.status === 'Paid' ? 'success' : 'warning'">{{ debt.status }}</ion-badge>
+    <ion-content class="app-content-wrap">
+      <!-- DASHBOARD TAB -->
+      <div v-show="activeTab === 'dashboard'" class="ion-padding">
+        <ion-grid class="mx-2">
+          <ion-row>
+            <ion-col size="6">
+              <ion-card class="mobile-card m-0 h-100">
+                <ion-card-content>
+                  <small class="text-muted d-block text-xs">Total Utang</small>
+                  <div class="fs-6 fw-black text-danger mt-1">{{ formatPrice(summary.total) }}</div>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+            <ion-col size="6">
+              <ion-card class="mobile-card m-0 h-100">
+                <ion-card-content>
+                  <small class="text-muted d-block text-xs">Belum Lunas</small>
+                  <div class="fs-6 fw-black text-warning mt-1">{{ formatPrice(summary.unpaid) }}</div>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </div>
+
+      <!-- RIWAYAT & DETAIL TAB -->
+      <div v-show="activeTab === 'riwayat'" class="ion-padding">
+        <div v-if="debts.length" class="row mx-2 mb-2">
+          <div v-for="debt in debts" :key="debt.id" class="col-12 col-sm-6 col-lg-4 g-2 m-0 mb-1 px-2">
+            <div class="mobile-card-sm h-100 d-flex align-items-center justify-content-between p-2">
+              <div class="d-flex flex-column" style="flex: 1; min-width: 0;">
+                <span class="badge mb-1 small align-self-start" :class="debt.status === 'Paid' ? 'bg-success' : 'bg-warning'">{{ debt.status }}</span>
+                <h6 class="fw-bold text-dark mb-0 text-truncate medium w-100">{{ debt.lender }}</h6>
+              </div>
+              <div class="d-flex flex-column align-items-end text-end me-2" style="flex: 2; min-width: 0;">
+                <small class="text-muted medium">{{ formatDate(debt.dueDate) }}</small>
+                <span class="text-danger fw-bold medium">{{ formatPrice(debt.amount) }}</span>
+              </div>
+              <div class="d-flex align-items-center gap-1" style="flex: 0;">
+                <button class="btn btn-light btn-sm text-primary me-1" @click="openModal(debt.id)" title="Edit">
+                  <ion-icon :icon="createOutline" />
+                </button>
+                <button class="btn btn-light btn-sm text-danger" @click="onDelete(debt.id)" title="Hapus">
+                  <ion-icon :icon="trashOutline" />
+                </button>
+              </div>
+            </div>
           </div>
-          <ion-button fill="clear" color="medium" @click="$router.push(`/debts/${debt.id}/edit`)">
-            <ion-icon :icon="pencilOutline" />
-          </ion-button>
-          <ion-button fill="clear" color="danger" @click="onDelete(debt.id)">
-            <ion-icon :icon="trashOutline" />
-          </ion-button>
-        </ion-item>
-      </ion-list>
+        </div>
+        <div v-else class="text-center py-5 text-muted mobile-card p-4 mx-3">
+          <p>Tidak ada utang ditemukan.</p>
+        </div>
+      </div>
     </ion-content>
+    <DebtModal v-model:is-open="isModalOpen" :debt-id="selectedDebtId" @saved="fetchAll" />
   </ion-page>
 </template>
 
 <script>
-import { onMounted, ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { debtsRepo } from '../../../db/repositories'
-import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonList, IonItem, IonLabel, IonNote, IonButtons, IonBackButton, IonBadge } from '@ionic/vue';
-import { addOutline, trashOutline, pencilOutline } from 'ionicons/icons';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonButtons, IonSegment, IonSegmentButton, IonLabel, IonGrid, IonRow, IonCol, IonCard, IonCardContent, alertController } from '@ionic/vue';
+import { addOutline, trashOutline, createOutline } from 'ionicons/icons';
+import DebtModal from './DebtModal.vue'
 
 export default {
   name: 'AccountingDebtsListView',
-  components: { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonList, IonItem, IonLabel, IonNote, IonButtons, IonBackButton, IonBadge },
+  components: { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonButtons, IonSegment, IonSegmentButton, IonLabel, IonGrid, IonRow, IonCol, IonCard, IonCardContent, DebtModal },
   setup() {
+    const router = useRouter()
+    const activeTab = ref('dashboard')
     const debts = ref([])
+    const isModalOpen = ref(false)
+    const selectedDebtId = ref(null)
+
     const fetchAll = async () => { debts.value = await debtsRepo.getAll() }
-    const onDelete = async (id) => { await debtsRepo.delete(id); fetchAll() }
-    const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(price)
-    const formatDate = (d) => new Date(d).toLocaleDateString('id-ID')
-    return { debts, onDelete, formatPrice, formatDate, addOutline, trashOutline, pencilOutline }
+    
+    const openModal = (id = null) => {
+      selectedDebtId.value = id
+      isModalOpen.value = true
+    }
+
+    const onDelete = async (id) => {
+      const alert = await alertController.create({
+        header: 'Konfirmasi',
+        message: 'Yakin ingin hapus data utang ini?',
+        buttons: [
+          { text: 'Batal', role: 'cancel' },
+          { text: 'Hapus', role: 'destructive', handler: async () => { await debtsRepo.delete(id); fetchAll() } }
+        ]
+      });
+      await alert.present();
+    }
+    const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(price || 0))
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'
+    
+    const summary = computed(() => ({
+      total: debts.value.reduce((sum, d) => sum + Number(d.amount || 0), 0),
+      unpaid: debts.value.filter(d => d.status !== 'Lunas').reduce((sum, d) => sum + Number(d.amount || 0), 0)
+    }))
+    
+    onMounted(fetchAll)
+    return { debts, onDelete, formatPrice, formatDate, addOutline, trashOutline, createOutline, activeTab, summary, openModal, isModalOpen, selectedDebtId, fetchAll }
   }
 }
 </script>
