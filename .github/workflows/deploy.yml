@@ -1,4 +1,4 @@
-name: Deploy Web, Desktop & Android Apps
+name: Deploy Web, Desktop & Android Apps (Tauri & Capacitor)
 
 on:
   push:
@@ -101,7 +101,7 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-  ### JOB 3: Build APK Android (Capacitor) & Attach ke Release
+  ### JOB 3: Build APK Android & Attach ke Release
   build-android:
     runs-on: ubuntu-latest
     steps:
@@ -119,8 +119,10 @@ jobs:
           VERSION_CODE=${GITHUB_RUN_NUMBER}
           echo "Syncing version $VERSION (Code: $VERSION_CODE) to Android build.gradle & package.json..."
           npm version $VERSION --no-git-tag-version --allow-same-version || true
-          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle
-          sed -i "s/versionCode .*/versionCode $VERSION_CODE/" android/app/build.gradle
+          npx json -I -f src-tauri/tauri.conf.json -e "this.version='$VERSION'" || true
+          sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml || true
+          sed -i "s/versionName \".*\"/versionName \"$VERSION\"/" android/app/build.gradle || true
+          sed -i "s/versionCode .*/versionCode $VERSION_CODE/" android/app/build.gradle || true
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
