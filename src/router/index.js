@@ -33,6 +33,7 @@ const routes = [
       { path: 'profile', name: 'Profile', component: () => import('../views/profile/ProfileView.vue') },
       { path: 'backup-restore', name: 'BackupRestore', component: () => import('../views/profile/BackupRestoreView.vue') },
       { path: 'reminders', name: 'Reminders', component: () => import('../views/reminder/ReminderView.vue') },
+      { path: 'notes', name: 'NotesList', component: () => import('../views/notes/ListView.vue') },
       { path: 'about', name: 'About', component: () => import('../views/AboutView.vue') },
       { path: 'contact', name: 'Contact', component: () => import('../views/ContactView.vue') },
       { path: ':pathMatch(.*)*', name: 'NotFoundChild', component: () => import('../views/NotFound.vue'), meta: { bare: true } },
