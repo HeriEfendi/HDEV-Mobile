@@ -12,8 +12,8 @@
       "filters": [],
       "attributes": [],
       "versionCode": 1,
-      "versionName": "1.0",
-      "outputFile": "hk-umkm-1.0-release.apk"
+      "versionName": "0.1.5",
+      "outputFile": "hk-umkm-0.1.5-release.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/hk-umkm-1.0-release.dm"
+        "baselineProfiles/1/hk-umkm-0.1.5-release.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/hk-umkm-1.0-release.dm"
+        "baselineProfiles/0/hk-umkm-0.1.5-release.dm"
       ]
     }
   ],

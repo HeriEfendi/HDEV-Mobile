@@ -54,13 +54,25 @@ jobs:
         with:
           node-version: 22
 
-      - name: Sync Version from Git Tag
+      - name: Sync Version from Git Tag (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          echo "Syncing version $VERSION to package.json, tauri.conf.json, and Cargo.toml..."
+          echo "Syncing version $VERSION..."
           npm version $VERSION --no-git-tag-version --allow-same-version || true
           npx json -I -f src-tauri/tauri.conf.json -e "this.version='$VERSION'" || true
           sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml || true
+
+      - name: Sync Version from Git Tag (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $TAG = "${{ github.ref_name }}"
+          $VERSION = $TAG.TrimStart("v")
+          Write-Host "Syncing version $VERSION on Windows..."
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          (Get-Content src-tauri/tauri.conf.json) | ForEach-Object { $_ -replace '"version": ".*"', """version"": ""$VERSION""" } | Set-Content src-tauri/tauri.conf.json
+          (Get-Content src-tauri/Cargo.toml) | ForEach-Object { $_ -replace '^version = ".*"', "version = ""$VERSION""" } | Set-Content src-tauri/Cargo.toml
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -134,15 +146,10 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Rename APK File with Version Tag
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/hk-umkm-${VERSION}-debug.apk
-
       - name: Upload APK to Release Assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: android/app/build/outputs/apk/debug/hk-umkm-*.apk
+          files: android/app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
