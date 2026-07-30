@@ -48,10 +48,20 @@
                   </div>
 
                   <!-- Inline Budget Edit Form -->
-                  <div v-if="editingBudget" class="d-flex align-items-center gap-2 mb-2">
-                    <NumberInput v-model="budgetDraft" placeholder="Contoh: 3.000.000" input-class="form-control app-control form-control-sm flex-grow-1" />
-                    <button class="btn btn-success btn-sm fw-bold px-3" @click="saveBudget">Simpan</button>
-                    <button class="btn btn-light btn-sm" @click="editingBudget = false">Batal</button>
+                  <div v-if="editingBudget" class="mb-2">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                      <NumberInput v-model="budgetDraft" placeholder="Contoh: 3.000.000" input-class="form-control app-control form-control-sm flex-grow-1" />
+                      <button class="btn btn-success btn-sm fw-bold px-3" @click="saveBudget">Simpan</button>
+                      <button class="btn btn-light btn-sm" @click="editingBudget = false">Batal</button>
+                    </div>
+                    <label for="budgetCategories" class="form-label text-muted text-xs mb-1">Kategori yang dihitung</label>
+                    <div id="budgetCategories" class="d-flex flex-wrap gap-2 mb-1">
+                      <label v-for="cat in allCategories" :key="cat" class="form-check form-check-inline text-xs mb-0">
+                        <input v-model="budgetCategoriesDraft" class="form-check-input" type="checkbox" :value="cat" :id="`budget-category-${cat}`" />
+                        <span class="form-check-label">{{ cat }}</span>
+                      </label>
+                    </div>
+                    <small class="text-muted text-xs">Kosongkan untuk menghitung semua kategori.</small>
                   </div>
 
                   <div v-else class="d-flex justify-content-between align-items-end">
@@ -105,7 +115,10 @@
             <ion-col size="12" size-sm="6" size-lg="4">
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
-                  <h6 class="fw-bold text-dark mb-3">Grafik Harian</h6>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Pengeluaran Harian Minggu Ini</h6>
+                    <span class="badge bg-light text-muted border small">Minggu Ini</span>
+                  </div>
                   <VueApexCharts v-if="dailyChartSeries[0].data.some(d => d > 0)" :key="'daily-' + expenses.length" type="bar" height="240" :options="dailyChartOptions" :series="dailyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data harian.</div>
                 </ion-card-content>
@@ -114,7 +127,10 @@
             <ion-col size="12" size-sm="6" size-lg="4">
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
-                  <h6 class="fw-bold text-dark mb-3">Trend 5 Minggu Terakhir</h6>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Trend Pengeluaran Mingguan</h6>
+                    <span class="badge bg-light text-muted border small">5 Minggu Terakhir</span>
+                  </div>
                   <VueApexCharts v-if="weeklyChartSeries[0].data.some(d => d > 0)" :key="'weekly-' + expenses.length" type="area" height="240" :options="weeklyChartOptions" :series="weeklyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data grafik mingguan.</div>
                 </ion-card-content>
@@ -123,7 +139,10 @@
             <ion-col size="12" size-sm="6" size-lg="4">
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
-                  <h6 class="fw-bold text-dark mb-3">Grafik Bulanan</h6>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Trend Pengeluaran Bulanan</h6>
+                    <span class="badge bg-light text-muted border small">6 Bulan Terakhir</span>
+                  </div>
                   <VueApexCharts v-if="monthlyChartSeries[0].data.some(d => d > 0)" :key="'monthly-' + expenses.length" type="area" height="240" :options="monthlyChartOptions" :series="monthlyChartSeries" />
                   <div v-else class="text-center py-4 text-muted">Belum ada data bulanan.</div>
                 </ion-card-content>
@@ -132,9 +151,19 @@
             <ion-col size="12" size-sm="6" size-lg="4">
               <ion-card class="mobile-card m-0 h-100">
                 <ion-card-content class="container-padded">
-                  <h6 class="fw-bold text-dark mb-3">Porsi Pengeluaran per Kategori</h6>
-                  <VueApexCharts v-if="donutSeries.length > 0 && donutSeries.some(d => d > 0)" :key="'donut-' + donutSeries.length" type="donut" height="240" :options="donutOptions" :series="donutSeries" />
-                  <div v-else class="text-center py-5 text-muted">Belum ada pengeluaran di bulan ini untuk dianalisa.</div>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0">Porsi Kategori</h6>
+                    <select v-model="categoryPeriodMonths" @change.prevent style="outline: none !important; box-shadow: none !important;" class="form-select app-control app-control-sm w-auto">
+                      <option :value="1">1 Bulan</option>
+                      <option :value="3">3 Bulan</option>
+                      <option :value="6">6 Bulan</option>
+                      <option :value="12">1 Tahun</option>
+                    </select>
+                  </div>
+                  <div style="min-height: 240px;" class="d-flex flex-column justify-content-center">
+                    <VueApexCharts v-if="donutSeries.length > 0 && donutSeries.some(d => d > 0)" :key="'donut-' + donutSeries.length" type="donut" height="240" :options="donutOptions" :series="donutSeries" />
+                    <div v-else class="text-center py-5 text-muted">Belum ada pengeluaran dalam {{ categoryPeriodMonths }} bulan terakhir untuk dianalisa.</div>
+                  </div>
                 </ion-card-content>
               </ion-card>
             </ion-col>
@@ -219,8 +248,11 @@ export default {
     const expenses = ref([])
     const accounts = ref([])
     const budget = ref(3000000) // Default budget limit: Rp 3.000.000
+    const categoryPeriodMonths = ref(6)
+    const budgetCategories = ref([])
     const editingBudget = ref(false)
     const budgetDraft = ref(null)
+    const budgetCategoriesDraft = ref([])
 
     // Filters
     const filterSearch = ref('')
@@ -237,10 +269,13 @@ export default {
       if (budgetRecord) {
         budget.value = Number(budgetRecord.value || 3000000)
       }
+      const budgetCategoriesRecord = await db.table('ceklok_settings').get('expense_budget_categories')
+      budgetCategories.value = Array.isArray(budgetCategoriesRecord?.value) ? budgetCategoriesRecord.value : []
     }
 
     const startEditBudget = () => {
       budgetDraft.value = budget.value
+      budgetCategoriesDraft.value = [...budgetCategories.value]
       editingBudget.value = true
     }
 
@@ -254,6 +289,12 @@ export default {
         })
         budget.value = val
       }
+      await db.table('ceklok_settings').put({
+        key: 'expense_budget_categories',
+        value: [...budgetCategoriesDraft.value],
+        updatedAt: new Date().toISOString()
+      })
+      budgetCategories.value = [...budgetCategoriesDraft.value]
       editingBudget.value = false
     }
 
@@ -286,17 +327,20 @@ export default {
     }
 
     const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(price || 0))
-    const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'
 
     const summary = computed(() => {
       const total = (from) => expenses.value.filter(e => new Date(e.date) >= from).reduce((sum, e) => sum + Number(e.amount || 0), 0)
+      const budgetTotal = (from) => expenses.value
+        .filter(e => new Date(e.date) >= from && (!budgetCategories.value.length || budgetCategories.value.includes(e.category || 'Umum')))
+        .reduce((sum, e) => sum + Number(e.amount || 0), 0)
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const dayOfWeek = today.getDay() || 7;
       const mondayOfWeek = new Date(today); mondayOfWeek.setDate(today.getDate() - (dayOfWeek - 1));
       return {
         daily: total(new Date(today)),
         weekly: total(new Date(mondayOfWeek)),
-        monthly: total(new Date(today.getFullYear(), today.getMonth(), 1)),
+        monthly: budgetTotal(new Date(today.getFullYear(), today.getMonth(), 1)),
       }
     })
 
@@ -336,19 +380,22 @@ export default {
       return result.sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
-    // Donut Chart logic
-    const categoryTotals = computed(() => {
-      const now = new Date()
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-      const currentMonthExpenses = expenses.value.filter(e => new Date(e.date) >= startOfMonth)
-      
-      const totals = {}
-      for (const e of currentMonthExpenses) {
-        const cat = e.category || 'Umum'
-        totals[cat] = (totals[cat] || 0) + Number(e.amount || 0)
-      }
-      return totals
-    })
+     // Donut Chart logic: dynamic months
+     const periodStart = (months) => {
+       const now = new Date()
+       return new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+     }
+
+     const categoryTotals = computed(() => {
+       const start = periodStart(categoryPeriodMonths.value)
+       const currentExpenses = expenses.value.filter(e => new Date(e.date) >= start)
+       const totals = {}
+       for (const e of currentExpenses) {
+         const cat = e.category || 'Umum'
+         totals[cat] = (totals[cat] || 0) + Number(e.amount || 0)
+       }
+       return totals
+     })
 
     const donutSeries = computed(() => Object.values(categoryTotals.value).map(v => Number.isFinite(v) ? Number(v) : 0))
     const donutOptions = computed(() => ({
@@ -474,10 +521,11 @@ export default {
       activeTab, expenses, onDelete, formatPrice, formatDate,
       addOutline, trashOutline, createOutline, pencilOutline, summary, createExpense,
       weeklyChartSeries, weeklyChartOptions, budget, budgetProgress,
-      editingBudget, budgetDraft, startEditBudget, saveBudget,
+      editingBudget, budgetDraft, startEditBudget, saveBudget, budgetCategoriesDraft,
       donutSeries, donutOptions, accounts, getAccountName, filterSearch,
       filterCategory, filterAccount, allCategories, filteredExpenses,
-      dailyChartSeries, dailyChartOptions, monthlyChartSeries, monthlyChartOptions
+      dailyChartSeries, dailyChartOptions, monthlyChartSeries, monthlyChartOptions,
+      categoryPeriodMonths
     }
   }
 }

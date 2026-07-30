@@ -13,6 +13,21 @@ export const UsersRepository = {
     return newUser;
   },
 
+  async getById(id: number) {
+    const db = await initDB();
+    return await db.get('users', id);
+  },
+
+  async update(id: number, user: any) {
+    const db = await initDB();
+    return await db.put('users', { ...user, id });
+  },
+
+  async delete(id: number) {
+    const db = await initDB();
+    return await db.delete('users', id);
+  },
+
   async seed() {
       const users = await this.getAll();
       if (users.length > 0) return;

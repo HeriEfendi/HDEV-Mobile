@@ -4,7 +4,7 @@
       <ion-toolbar class="app-toolbar">
         <div class="app-hero" style="display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
-            <ion-title class="app-hero-title" style="padding: 0;">Backup & Restore</ion-title>
+            <ion-title class="app-hero-title" style="padding: 0;">Backup &amp; Restore</ion-title>
           </div>
           <p class="app-hero-subtitle" style="margin: 0;">Ekspor seluruh data database ke Excel atau Impor kembali kapan saja.</p>
         </div>
@@ -32,7 +32,7 @@
             </div>
             <ion-card-title class="mobile-card-title mt-3">Backup Database</ion-card-title>
             <ion-card-subtitle class="mobile-card-subtitle">
-              Ekspor seluruh data dari database lokal (termasuk Proyek, Transaksi, Ceklok, Produk, Kasir, To Do, dll) ke dalam satu file Excel (.xlsx).
+              Ekspor data dari tabel yang dipilih ke dalam satu file Excel (.xlsx).
             </ion-card-subtitle>
           </ion-card-header>
           <ion-card-content class="d-flex flex-column gap-3">
@@ -40,7 +40,47 @@
               <ion-icon :icon="informationCircleOutline" />
               <span>Setiap tabel database akan disimpan sebagai lembar sheet terpisah di file Excel.</span>
             </div>
-            <ion-button class="btn-action success w-100" expand="block" style="margin: 0;" @click="handleBackup">
+
+            <!-- Table Selection for Backup -->
+            <div class="table-select-box">
+              <div class="table-select-header">
+                <span class="table-select-title">
+                  <ion-icon :icon="listOutline" />
+                  Pilih Tabel ({{ backupSelectedTables.length }}/{{ allTableNames.length }})
+                </span>
+                <div class="select-actions">
+                  <button class="sel-btn" @click="selectAllBackup">Semua</button>
+                  <button class="sel-btn" @click="deselectAllBackup">Hapus</button>
+                </div>
+              </div>
+              <div class="table-list">
+                <label
+                  v-for="tbl in allTableNames"
+                  :key="'bk-' + tbl"
+                  class="table-item"
+                  :class="{ checked: backupSelectedTables.includes(tbl) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="tbl"
+                    v-model="backupSelectedTables"
+                    class="hidden-cb"
+                  />
+                  <span class="cb-box">
+                    <ion-icon v-if="backupSelectedTables.includes(tbl)" :icon="checkmarkOutline" class="cb-check" />
+                  </span>
+                  <span class="tbl-name">{{ tbl }}</span>
+                </label>
+              </div>
+            </div>
+
+            <ion-button
+              class="btn-action success w-100"
+              expand="block"
+              style="margin: 0;"
+              :disabled="backupSelectedTables.length === 0"
+              @click="handleBackup"
+            >
               <ion-icon :icon="cloudDownloadOutline" slot="start" /> Ekspor ke Excel
             </ion-button>
           </ion-card-content>
@@ -61,7 +101,40 @@
           <ion-card-content class="d-flex flex-column gap-3">
             <div class="info-alert warning">
               <ion-icon :icon="alertCircleOutline" />
-              <span>PENTING: Seluruh data pada tabel yang ada di file backup akan dihapus terlebih dahulu dan digantikan dengan data baru dari file Excel tersebut. Tabel yang tidak ada di file backup aman dan tidak akan dihapus.</span>
+              <span>PENTING: Seluruh data pada tabel yang dipilih akan DIHAPUS dan digantikan dengan data dari file Excel.</span>
+            </div>
+
+            <!-- Table Selection for Restore -->
+            <div class="table-select-box indigo">
+              <div class="table-select-header">
+                <span class="table-select-title">
+                  <ion-icon :icon="listOutline" />
+                  Pilih Tabel ({{ restoreSelectedTables.length }}/{{ allTableNames.length }})
+                </span>
+                <div class="select-actions">
+                  <button class="sel-btn indigo" @click="selectAllRestore">Semua</button>
+                  <button class="sel-btn indigo" @click="deselectAllRestore">Hapus</button>
+                </div>
+              </div>
+              <div class="table-list">
+                <label
+                  v-for="tbl in allTableNames"
+                  :key="'rs-' + tbl"
+                  class="table-item indigo"
+                  :class="{ checked: restoreSelectedTables.includes(tbl) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="tbl"
+                    v-model="restoreSelectedTables"
+                    class="hidden-cb"
+                  />
+                  <span class="cb-box indigo">
+                    <ion-icon v-if="restoreSelectedTables.includes(tbl)" :icon="checkmarkOutline" class="cb-check" />
+                  </span>
+                  <span class="tbl-name">{{ tbl }}</span>
+                </label>
+              </div>
             </div>
 
             <!-- Custom File Upload Button -->
@@ -73,8 +146,14 @@
                 class="hidden-file-input"
                 @change="handleFileChange"
               />
-              <ion-button class="btn-action warning w-100" expand="block" style="margin: 0;" @click="triggerFileSelect">
-                <ion-icon :icon="cloudUploadOutline" slot="start" /> Pilih File Excel & Restore
+              <ion-button
+                class="btn-action warning w-100"
+                expand="block"
+                style="margin: 0;"
+                :disabled="restoreSelectedTables.length === 0"
+                @click="triggerFileSelect"
+              >
+                <ion-icon :icon="cloudUploadOutline" slot="start" /> Pilih File Excel &amp; Restore
               </ion-button>
             </div>
           </ion-card-content>
@@ -93,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import {
   IonPage,
   IonContent,
@@ -119,6 +198,8 @@ import {
   downloadOutline,
   documentTextOutline,
   settingsOutline,
+  listOutline,
+  checkmarkOutline,
 } from 'ionicons/icons';
 import { db } from '@/db/schema';
 import * as XLSX from 'xlsx';
@@ -136,6 +217,34 @@ const toast = ref({
   text: '',
   color: 'success',
 });
+
+// ── Table selection state ──────────────────────────────────────────────────────
+const allTableNames = ref([]);
+const backupSelectedTables = ref([]);
+const restoreSelectedTables = ref([]);
+
+onMounted(async () => {
+  if (!db.isOpen()) await db.open();
+  allTableNames.value = db.tables.map((t) => t.name);
+  // Default: semua tabel tercentang
+  backupSelectedTables.value = [...allTableNames.value];
+  restoreSelectedTables.value = [...allTableNames.value];
+});
+
+// Select All / Deselect All helpers
+function selectAllBackup() {
+  backupSelectedTables.value = [...allTableNames.value];
+}
+function deselectAllBackup() {
+  backupSelectedTables.value = [];
+}
+function selectAllRestore() {
+  restoreSelectedTables.value = [...allTableNames.value];
+}
+function deselectAllRestore() {
+  restoreSelectedTables.value = [];
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 function showToast(text, color = 'success') {
   toast.value = { show: true, text, color };
@@ -175,7 +284,7 @@ async function saveWorkbook(wb, fileName) {
 
 /**
  * BACKUP DATABASE
- * Export all Dexie tables to a single Excel file
+ * Export selected Dexie tables to a single Excel file
  */
 // Excel hard limit per cell is 32,767 characters
 const EXCEL_CELL_LIMIT = 32000;
@@ -200,6 +309,11 @@ function sanitizeCellValue(val) {
 }
 
 async function handleBackup() {
+  if (backupSelectedTables.value.length === 0) {
+    showToast('Pilih minimal satu tabel untuk di-backup.', 'warning');
+    return;
+  }
+
   loading.value = true;
   loadingMessage.value = 'Mempersiapkan ekspor...';
   const skippedTables = [];
@@ -208,7 +322,7 @@ async function handleBackup() {
     if (!db.isOpen()) await db.open();
 
     const wb = XLSX.utils.book_new();
-    const tables = db.tables;
+    const tables = db.tables.filter((t) => backupSelectedTables.value.includes(t.name));
 
     for (let i = 0; i < tables.length; i++) {
       const table = tables[i];
@@ -245,7 +359,7 @@ async function handleBackup() {
     if (skippedTables.length > 0) {
       showToast(`Backup selesai (${skippedTables.length} tabel dilewati: ${skippedTables.join(', ')})`, 'warning');
     } else {
-      showToast('Berhasil mengekspor backup database!', 'success');
+      showToast(`Berhasil mengekspor ${tables.length} tabel ke backup database!`, 'success');
     }
   } catch (err) {
     console.error('Export failed:', err);
@@ -262,15 +376,21 @@ const TABLE_NAME_MAP = {
 
 /**
  * RESTORE DATABASE
- * Import tables from chosen Excel file, wiping only modified tables
+ * Import only selected tables from chosen Excel file
  */
 async function handleFileChange(e) {
   const file = e.target.files?.[0];
   if (!file) return;
 
+  if (restoreSelectedTables.value.length === 0) {
+    showToast('Pilih minimal satu tabel untuk di-restore.', 'warning');
+    e.target.value = '';
+    return;
+  }
+
   // Ask for confirmation
   const confirmRestore = confirm(
-    'Apakah Anda yakin ingin melakukan restore? Data pada tabel yang terdaftar di file backup ini akan DIHAPUS dan digantikan sepenuhnya.'
+    `Apakah Anda yakin ingin melakukan restore pada ${restoreSelectedTables.value.length} tabel berikut?\n\n${restoreSelectedTables.value.join(', ')}\n\nData pada tabel tersebut akan DIHAPUS dan digantikan sepenuhnya.`
   );
   if (!confirmRestore) {
     e.target.value = ''; // Reset file input
@@ -300,6 +420,9 @@ async function handleFileChange(e) {
       await db.transaction('rw', db.tables, async () => {
         for (const sheetName of workbook.SheetNames) {
           const targetTableName = TABLE_NAME_MAP[sheetName] || sheetName;
+
+          // Only restore tables that are selected by the user
+          if (!restoreSelectedTables.value.includes(targetTableName)) continue;
 
           const table = db.tables.find((t) => t.name === targetTableName);
           if (!table) continue;
@@ -497,6 +620,172 @@ async function handleFileChange(e) {
 .hidden-file-input {
   display: none;
 }
+
+/* ── Table Selection Box ───────────────────────────────────────────────────── */
+.table-select-box {
+  border: 1.5px solid #d1fae5;
+  border-radius: 14px;
+  background: #f0fdf4;
+  overflow: hidden;
+}
+
+.table-select-box.indigo {
+  border-color: #c7d2fe;
+  background: #f5f3ff;
+}
+
+.table-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid #d1fae5;
+  background: #ecfdf5;
+}
+
+.table-select-box.indigo .table-select-header {
+  border-color: #c7d2fe;
+  background: #ede9fe;
+}
+
+.table-select-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #065f46;
+  letter-spacing: 0.3px;
+}
+
+.table-select-box.indigo .table-select-title {
+  color: #3730a3;
+}
+
+.table-select-title ion-icon {
+  font-size: 1rem;
+}
+
+.select-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.sel-btn {
+  background: #d1fae5;
+  color: #065f46;
+  border: none;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.sel-btn:hover {
+  background: #a7f3d0;
+  transform: scale(1.04);
+}
+
+.sel-btn.indigo {
+  background: #c7d2fe;
+  color: #3730a3;
+}
+
+.sel-btn.indigo:hover {
+  background: #a5b4fc;
+}
+
+/* Scrollable table list */
+.table-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #a7f3d0 transparent;
+}
+
+.table-select-box.indigo .table-list {
+  scrollbar-color: #a5b4fc transparent;
+}
+
+/* Individual table item */
+.table-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.table-item:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.table-item.indigo:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.table-item.checked {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.table-item.checked.indigo {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.hidden-cb {
+  display: none;
+}
+
+/* Custom checkbox box */
+.cb-box {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 5px;
+  border: 2px solid #6ee7b7;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.table-item.checked .cb-box {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.cb-box.indigo {
+  border-color: #a5b4fc;
+}
+
+.table-item.checked .cb-box.indigo {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.cb-check {
+  font-size: 0.7rem;
+  color: #fff;
+  font-weight: 800;
+}
+
+.tbl-name {
+  font-size: 0.8rem;
+  color: #1e293b;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
 
 /* Loading Overlay */
 .loading-overlay {

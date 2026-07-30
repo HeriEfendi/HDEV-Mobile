@@ -16,7 +16,7 @@ db.version(6).stores({
   ceklok_settings: 'key',
 
   // Merged umkm_marketplace stores (from Dexie)
-  categories: 'id, name',
+  categories: '++id, name',
   products: '++id, name, price, stock, categoryId, featured',
   capitalCosts: '++id, createdAt, name, amount',
   debts: '++id, createdAt, name, amount, dueDate',
@@ -113,8 +113,32 @@ db.version(10).stores({
   sales: '++id, createdAt, totalAmount, paymentMethod, amountPaid, changeAmount, items, notes',
   stockMutations: '++id, productId, type, changeQuantity, beforeStock, afterStock, createdAt, notes',
   saving_accounts: '++id, name, category',
-  saving_transactions: '++id, accountId, type, date',
   reminders: '++id, date, recurring'
+});
+
+// Version 11: Add notes and note_labels table for Google Keep feature
+db.version(11).stores({
+  projects: 'id',
+  todos: 'id',
+  team_todos: 'id',
+  users: 'id',
+  transactions: 'id, project_id',
+  ceklok_logs: 'id',
+  ceklok_settings: 'key',
+  categories: 'id, name',
+  products: '++id, name, price, stock, categoryId, featured',
+  savings: '++id, createdAt, name, amount',
+  debts: '++id, createdAt, name, amount, dueDate',
+  incomes: '++id, createdAt, name, amount',
+  expenses: '++id, createdAt, description, amount, date, category',
+  dailyLedger: '++id, createdAt, description, amount, type',
+  sales: '++id, createdAt, totalAmount, paymentMethod, amountPaid, changeAmount, items, notes',
+  stockMutations: '++id, productId, type, changeQuantity, beforeStock, afterStock, createdAt, notes',
+  saving_accounts: '++id, name, category',
+  saving_transactions: '++id, accountId, type, date',
+  reminders: '++id, date, recurring',
+  notes: '++id, title, isPinned, isArchived, isTrashed, color, createdAt, updatedAt',
+  note_labels: '++id, name'
 });
 
 let databaseSeeded = false;

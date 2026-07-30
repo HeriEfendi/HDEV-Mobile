@@ -9,6 +9,33 @@
   --bs-dark: #343a40;
   --text-secondary: #6b7280;
 
+  /* Semantic Theme Colors - Harmonized Tone */
+  --color-red: #f43f5e;
+  --color-rose: #e11d48;
+  --color-orange: #f97316;
+  --color-amber: #f59e0b;
+  --color-yellow: #eab308;
+  --color-lime: #84cc16;
+  --color-green: #22c55e;
+  --color-emerald: #10b981;
+  --color-teal: #14b8a6;
+  --color-cyan: #06b6d4;
+  --color-sky: #0ea5e9;
+  --color-blue: #3b82f6;
+  --color-indigo: #6366f1;
+  --color-violet: #8b5cf6;
+  --color-purple: #a855f7;
+  --color-fuchsia: #d946ef;
+  --color-pink: #ec4899;
+  --color-rose-deep: #be123c;
+  --color-orange-deep: #c2410c;
+  --color-amber-deep: #b45309;
+  --color-green-deep: #15803d;
+  --color-teal-deep: #0f766e;
+  --color-cyan-deep: #0891b2;
+  --color-blue-deep: #1d4ed8;
+  --color-purple-deep: #7e22ce;
+
   font-family: 'Arial', sans-serif;
   line-height: 1.6;
   font-weight: 400;
@@ -466,6 +493,13 @@ ion-header {
   border-radius: 14px;
   background: #f8fbff;
   min-height: 44px;
+}
+
+.app-control-sm {
+  min-height: 32px;
+  font-size: 0.75rem;
+  padding: 0 8px;
+  border-radius: 8px;
 }
 
 .summary-grid {
@@ -1140,7 +1174,7 @@ ion-footer {
 
 .mobile-card-sm {
   overflow: hidden;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
   background: rgba(255,255,255,.94);
   box-shadow: 0 4px 12px rgba(15, 23, 42, .04) !important;
   backdrop-filter: blur(12px);

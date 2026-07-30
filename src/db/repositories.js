@@ -9,8 +9,10 @@ export const CategoryRepository = {
     return await db.categories.get(id);
   },
   async add(category) {
-    const id = await db.categories.add(category);
-    return { id, ...category };
+    // Pastikan kita tidak mengirim ID ke db.add jika ID-nya adalah auto-increment (++)
+    const categoryData = { name: category.name }; 
+    const id = await db.categories.add(categoryData);
+    return { id, ...categoryData };
   },
   async update(id, changes) {
     await db.categories.update(id, changes);
