@@ -222,7 +222,8 @@ import {
   checkboxOutline, documentTextOutline, walletOutline, basketOutline,
   personOutline, cashOutline, timeOutline, cartOutline, layersOutline,
   informationCircleOutline, settingsOutline, closeOutline, reorderTwoOutline,
-  alarmOutline, calendarOutline
+  alarmOutline, calendarOutline, journalOutline, arrowUpCircleOutline,
+  cardOutline, listOutline, peopleOutline, cloudDownloadOutline
 } from 'ionicons/icons'
 
 import { ReminderRepository, getNextOccurrence, daysUntil } from '@/db/reminderRepository'
@@ -230,17 +231,31 @@ import { ReminderRepository, getNextOccurrence, daysUntil } from '@/db/reminderR
 const STORAGE_KEY = 'home_menu_settings'
 
 const ALL_MENU = [
+  // Personal
+  { name: 'Catatan', path: '/notes', icon: journalOutline, count: 0, description: 'Catatan & Ide Pribadi', accent: 'var(--color-yellow)', visible: true },
   { name: 'To Do', path: '/todo-personal', icon: checkboxOutline, count: 0, description: 'Tugas pribadi', accent: 'var(--color-blue)', visible: true },
   { name: 'To Do Team', path: '/todo', icon: checkboxOutline, count: 0, description: 'Kerja tim', accent: 'var(--color-purple)', visible: true },
-  { name: 'Buku Kas', path: '/buku_kas', icon: documentTextOutline, count: 0, description: 'Bisnis, hobi & renovasi', accent: 'var(--color-green)', visible: true },
   { name: 'Ceklok', path: '/ceklok', icon: timeOutline, count: 0, description: 'Presensi kerja', accent: 'var(--color-cyan)', visible: true },
   { name: 'Pengingat', path: '/reminders', icon: alarmOutline, count: 0, description: 'Hari penting', accent: 'var(--color-amber)', visible: true },
-  { name: 'Pengeluaran', path: '/expenses', icon: cashOutline, count: 0, description: 'Keluar dana', accent: 'var(--color-orange)', visible: true },
-  { name: 'Kasir (POS)', path: '/cashier', icon: cartOutline, count: 0, description: 'Penjualan & Kasir', accent: 'var(--color-emerald)', visible: true },
+
+  // Keuangan
+  { name: 'Buku Kas', path: '/buku_kas', icon: documentTextOutline, count: 0, description: 'Bisnis, hobi & renovasi', accent: 'var(--color-green)', visible: true },
   { name: 'Tabungan', path: '/savings', icon: walletOutline, count: 0, description: 'Simpanan dana', accent: 'var(--color-yellow)', visible: true },
-  { name: 'Produk', path: '/products', icon: basketOutline, count: 0, description: 'Stok produk', accent: 'var(--color-red)', visible: true },
+  { name: 'Pengeluaran', path: '/expenses', icon: cashOutline, count: 0, description: 'Keluar dana', accent: 'var(--color-orange)', visible: true },
+  { name: 'Pendapatan', path: '/incomes', icon: arrowUpCircleOutline, count: 0, description: 'Dana masuk', accent: 'var(--color-emerald)', visible: true },
+  { name: 'Utang', path: '/debts', icon: cardOutline, count: 0, description: 'Catatan utang', accent: 'var(--color-purple)', visible: true },
+
+  // Supply Chain
+  { name: 'Kasir (POS)', path: '/cashier', icon: cartOutline, count: 0, description: 'Penjualan & Kasir', accent: 'var(--color-emerald)', visible: true },
   { name: 'Manajemen Stok', path: '/stock', icon: layersOutline, count: 0, description: 'Monitor & atur stok', accent: 'var(--color-indigo)', visible: true },
+  { name: 'Produk', path: '/products', icon: basketOutline, count: 0, description: 'Stok produk', accent: 'var(--color-red)', visible: true },
+  { name: 'Kategori', path: '/categories', icon: listOutline, count: 0, description: 'Master kategori', accent: 'var(--color-teal)', visible: true },
+
+  // General Setting
+  { name: 'Users', path: '/users', icon: peopleOutline, count: 0, description: 'Data pengguna', accent: 'var(--color-teal-deep)', visible: true },
+  { name: 'Backup & Restore', path: '/backup-restore', icon: cloudDownloadOutline, description: 'Ekspor & Impor Database', accent: 'var(--color-indigo)', visible: true },
   { name: 'Tentang Aplikasi', path: '/about', icon: informationCircleOutline, description: 'Tentang & Developer', accent: 'var(--color-sky)', visible: true },
+  { name: 'Profile', path: '/profile', icon: personOutline, description: 'Data profil', accent: 'var(--color-blue-deep)', visible: true },
 ]
 
 export default {
@@ -358,9 +373,9 @@ export default {
       try {
         const { initDB } = await import('@/db')
         const db = await initDB()
-        const todos = await db.getAll('todos')
-        const teamTodos = await db.getAll('team_todos')
-        const projects = await db.getAll('projects')
+        const todos = await db.getAll('todos').catch(() => [])
+        const teamTodos = await db.getAll('team_todos').catch(() => [])
+        const projects = await db.getAll('projects').catch(() => [])
         const ceklokLogs = await db.getAll('ceklok_logs').catch(() => [])
 
         const updateCount = (path, count) => {
@@ -376,14 +391,28 @@ export default {
         const allReminders = await ReminderRepository.getAll().catch(() => [])
         updateCount('/reminders', allReminders.length)
 
-        const { savingAccountsRepo, ProductRepository, salesRepo, expensesRepo } = await import('../db/repositories')
+        const { NoteRepository } = await import('@/db/noteRepository')
+        const allNotes = await NoteRepository.getAll().catch(() => [])
+        updateCount('/notes', allNotes.length)
 
-        const allProducts = await ProductRepository.getAll()
+        const { UsersRepository } = await import('@/db/usersRepository')
+        const allUsers = await UsersRepository.getAll().catch(() => [])
+        updateCount('/users', allUsers.length)
+
+        const {
+          savingAccountsRepo, ProductRepository, salesRepo,
+          expensesRepo, incomesRepo, debtsRepo, CategoryRepository
+        } = await import('../db/repositories')
+
+        const allProducts = await ProductRepository.getAll().catch(() => [])
         const lowStockItems = allProducts.filter(p => p.stock !== null && p.stock !== undefined && p.stock <= 10)
 
-        updateCount('/cashier', (await salesRepo.getAll()).length)
-        updateCount('/savings', (await savingAccountsRepo.getAll()).length)
-        updateCount('/expenses', (await expensesRepo.getAll()).length)
+        updateCount('/cashier', (await salesRepo.getAll().catch(() => [])).length)
+        updateCount('/savings', (await savingAccountsRepo.getAll().catch(() => [])).length)
+        updateCount('/expenses', (await expensesRepo.getAll().catch(() => [])).length)
+        updateCount('/incomes', (await incomesRepo.getAll().catch(() => [])).length)
+        updateCount('/debts', (await debtsRepo.getAll().catch(() => [])).length)
+        updateCount('/categories', (await CategoryRepository.getAll().catch(() => [])).length)
         updateCount('/products', allProducts.length)
         updateCount('/stock', lowStockItems.length)
       } catch (e) {

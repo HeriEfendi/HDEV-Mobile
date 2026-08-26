@@ -11,7 +11,7 @@
               </ion-button>
             </ion-buttons>
           </div>
-          <p class="app-hero-subtitle">Pantau kewajiban pembayaran, jatuh tempo, serta status pelunasan utang Anda.</p>
+          <p class="app-hero-subtitle">Pantau kewajiban pembayaran, jatuh tempo, skema cicilan, serta status pelunasan utang.</p>
         </div>
       </ion-toolbar>
 
@@ -44,7 +44,7 @@
           <!-- Summary Cards Grid -->
           <ion-grid class="mx-2">
             <ion-row>
-              <!-- Total Utang -->
+              <!-- Total Pokok Utang -->
               <ion-col size="6" size-md="3">
                 <ion-card class="mobile-card m-0 h-100">
                   <ion-card-content class="p-3">
@@ -58,30 +58,30 @@
                 </ion-card>
               </ion-col>
 
-              <!-- Belum Lunas -->
+              <!-- Sisa Belum Lunas -->
               <ion-col size="6" size-md="3">
                 <ion-card class="mobile-card m-0 h-100 border-start border-4 border-warning">
                   <ion-card-content class="p-3">
                     <div class="d-flex align-items-center gap-2 mb-1">
                       <ion-icon :icon="alertCircleOutline" class="text-warning fs-5" />
-                      <small class="text-muted text-xs fw-bold text-uppercase">Belum Lunas</small>
+                      <small class="text-muted text-xs fw-bold text-uppercase">Sisa Belum Lunas</small>
                     </div>
-                    <div class="fs-6 fw-black text-warning mt-1">{{ formatPrice(summary.unpaid) }}</div>
-                    <small class="text-muted text-xs">{{ summary.unpaidCount }} utang tersisa</small>
+                    <div class="fs-6 fw-black text-warning mt-1">{{ formatPrice(summary.remaining) }}</div>
+                    <small class="text-muted text-xs">{{ summary.unpaidCount }} utang aktif</small>
                   </ion-card-content>
                 </ion-card>
               </ion-col>
 
-              <!-- Sudah Lunas -->
+              <!-- Sudah Dibayar / Dicicil -->
               <ion-col size="6" size-md="3">
                 <ion-card class="mobile-card m-0 h-100 border-start border-4 border-success">
                   <ion-card-content class="p-3">
                     <div class="d-flex align-items-center gap-2 mb-1">
                       <ion-icon :icon="checkmarkCircleOutline" class="text-success fs-5" />
-                      <small class="text-muted text-xs fw-bold text-uppercase">Sudah Lunas</small>
+                      <small class="text-muted text-xs fw-bold text-uppercase">Telah Terbayar</small>
                     </div>
                     <div class="fs-6 fw-black text-success mt-1">{{ formatPrice(summary.paid) }}</div>
-                    <small class="text-muted text-xs">{{ summary.paidCount }} utang selesai</small>
+                    <small class="text-muted text-xs">{{ summary.paidCount }} utang lunas penuh</small>
                   </ion-card-content>
                 </ion-card>
               </ion-col>
@@ -108,7 +108,7 @@
               <ion-icon :icon="alertCircleOutline" class="fs-4" />
               <div>
                 <strong class="d-block text-sm">Peringatan Jatuh Tempo!</strong>
-                <span class="text-xs">Ada {{ overdueDebtsCount }} utang yang sudah melewati batas tanggal jatuh tempo.</span>
+                <span class="text-xs">Ada {{ overdueDebtsCount }} utang yang telah melewati tanggal jatuh tempo dan belum lunas.</span>
               </div>
             </div>
             <button class="btn btn-sm btn-light text-danger fw-bold ms-2 text-nowrap" @click="activeTab = 'riwayat'; statusFilter = 'overdue';">
@@ -117,11 +117,11 @@
           </div>
 
           <!-- Progress / Settlement Bar -->
-          <div class="mobile-card p-3 mx-3 mb-3">
+          <div class="mobile-card p-3 mx-3 mb-3 shadow-sm">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="text-xs fw-bold text-muted text-uppercase">Tingkat Pelunasan Utang</span>
+              <span class="text-xs fw-bold text-muted text-uppercase">Tingkat Pelunasan Akumulatif</span>
               <span class="badge" :class="paidPercentage >= 100 ? 'bg-success' : 'bg-primary'">
-                {{ paidPercentage }}% Lunas
+                {{ paidPercentage }}% Terbayar
               </span>
             </div>
             <div class="progress" style="height: 12px; border-radius: 6px;">
@@ -133,6 +133,45 @@
                 aria-valuemax="100"
               ></div>
             </div>
+            <div class="d-flex justify-content-between text-xs text-muted mt-2">
+              <span>Dibayar: <strong>{{ formatPrice(summary.paid) }}</strong></span>
+              <span>Sisa Kewajiban: <strong class="text-danger">{{ formatPrice(summary.remaining) }}</strong></span>
+            </div>
+          </div>
+
+          <!-- Active Installment Schedules Widget -->
+          <div v-if="scheduledDebts.length > 0" class="mobile-card p-3 mx-3 mb-3 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <ion-icon :icon="calendarOutline" class="text-primary" />
+                Jadwal Cicilan Aktif
+              </h6>
+              <span class="badge bg-light-primary text-primary text-xs">{{ scheduledDebts.length }} Jadwal</span>
+            </div>
+            <div class="d-flex flex-column gap-2 mt-2">
+              <div
+                v-for="item in scheduledDebts.slice(0, 4)"
+                :key="item.id"
+                class="p-2 px-3 bg-light rounded-3 border d-flex justify-content-between align-items-center"
+              >
+                <div>
+                  <div class="fw-bold text-dark text-sm">{{ item.lender }}</div>
+                  <div class="text-xs text-muted">
+                    <span class="badge bg-info text-white me-1">{{ getScheduleLabel(item) }}</span>
+                    <span v-if="item.installmentAmount">Est: {{ formatPrice(item.installmentAmount) }} • </span>
+                    Sisa: <span class="text-danger fw-semibold">{{ formatPrice(getRemainingAmount(item)) }}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary fw-bold text-xs px-2 py-1"
+                  @click="openPaymentModal(item)"
+                >
+                  <ion-icon :icon="cashOutline" class="me-1" />
+                  Bayar
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Charts Section -->
@@ -143,7 +182,7 @@
                 <ion-card class="mobile-card m-0 h-100">
                   <ion-card-content class="container-padded">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                      <h6 class="fw-bold text-dark mb-0">5 Utang Terbesar</h6>
+                      <h6 class="fw-bold text-dark mb-0">5 Utang Terbesar (Sisa Pokok)</h6>
                       <span class="badge bg-light text-muted border text-xs">Pemberi Utang</span>
                     </div>
                     <VueApexCharts 
@@ -154,7 +193,7 @@
                       :options="topDebtsChartOptions" 
                       :series="topDebtsChartSeries" 
                     />
-                    <div v-else class="text-center py-4 text-muted text-sm">Belum ada data utang untuk ditampilkan.</div>
+                    <div v-else class="text-center py-4 text-muted text-sm">Belum ada data utang aktif untuk ditampilkan.</div>
                   </ion-card-content>
                 </ion-card>
               </ion-col>
@@ -186,14 +225,14 @@
         <!-- ==================== TAB 2: RIWAYAT & DETAIL ==================== -->
         <div v-show="activeTab === 'riwayat'" class="ion-padding">
           <!-- Filter & Search Controls -->
-          <div class="mobile-card p-3 mb-3 mx-3">
+          <div class="mobile-card p-3 mb-3 mx-3 shadow-sm">
             <div class="row g-2 align-items-center">
               <div class="col-12 col-md-5">
                 <input 
                   type="text" 
                   v-model="searchQuery" 
                   class="form-control app-control" 
-                  placeholder="Cari nama pemberi utang..." 
+                  placeholder="Cari nama pemberi utang / catatan..." 
                 />
               </div>
 
@@ -201,15 +240,17 @@
                 <select v-model="statusFilter" class="form-select app-control">
                   <option value="all">Semua Status ({{ debts.length }})</option>
                   <option value="unpaid">Belum Lunas ({{ summary.unpaidCount }})</option>
-                  <option value="paid">Lunas ({{ summary.paidCount }})</option>
+                  <option value="installment">Sedang Dicicil ({{ summary.installmentCount }})</option>
+                  <option value="paid">Sudah Lunas ({{ summary.paidCount }})</option>
                   <option value="overdue">Terlewat Jatuh Tempo ({{ overdueDebtsCount }})</option>
+                  <option value="scheduled">Memiliki Jadwal Cicilan ({{ scheduledDebts.length }})</option>
                 </select>
               </div>
 
               <div class="col-6 col-md-3">
                 <select v-model="sortBy" class="form-select app-control">
                   <option value="dueDateAsc">Jatuh Tempo (Terdekat)</option>
-                  <option value="amountDesc">Nominal (Terbesar)</option>
+                  <option value="amountDesc">Sisa Utang (Terbesar)</option>
                   <option value="newest">Terbaru</option>
                 </select>
               </div>
@@ -218,58 +259,105 @@
 
           <!-- Debt Items List -->
           <div v-if="filteredDebts.length > 0" class="row mx-2">
-            <div v-for="debt in filteredDebts" :key="debt.id" class="col-12 col-sm-6 col-lg-4 g-2 m-0 mb-2 px-2">
+            <div v-for="debt in filteredDebts" :key="debt.id" class="col-12 col-sm-6 col-lg-4 g-2 m-0 mb-3 px-2">
               <div 
-                class="mobile-card-sm h-100 p-3 d-flex flex-column justify-content-between border-start border-4"
+                class="mobile-card-sm h-100 p-3 d-flex flex-column justify-content-between border-start border-4 shadow-sm"
                 :class="getCardBorderClass(debt)"
               >
                 <div>
                   <!-- Card Header: Status & Due Info -->
-                  <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
                     <span class="badge text-xs" :class="getStatusBadgeClass(debt)">
-                      {{ isPaid(debt) ? 'Lunas' : 'Belum Lunas' }}
+                      {{ getStatusText(debt) }}
                     </span>
 
                     <span class="text-xs fw-semibold" :class="getDueDateColorClass(debt)">
                       <ion-icon :icon="calendarOutline" class="me-1 align-text-bottom" />
-                      {{ formatDate(debt.dueDate) }}
+                      {{ debt.dueDate ? formatDate(debt.dueDate) : 'Tanpa Jatuh Tempo' }}
                     </span>
                   </div>
 
                   <!-- Lender & Amount -->
                   <div class="mb-2">
                     <h6 class="fw-bold text-dark m-0 text-truncate" :title="debt.lender">{{ debt.lender }}</h6>
-                    <div class="fs-5 fw-black mt-1" :class="isPaid(debt) ? 'text-success' : 'text-danger'">
-                      {{ formatPrice(debt.amount) }}
+                    
+                    <div class="d-flex justify-content-between align-items-baseline mt-1">
+                      <div>
+                        <small class="text-muted text-xs d-block">Sisa Tagihan:</small>
+                        <span class="fs-5 fw-black" :class="isDebtPaid(debt) ? 'text-success' : 'text-danger'">
+                          {{ formatPrice(getRemainingAmount(debt)) }}
+                        </span>
+                      </div>
+                      <div class="text-end">
+                        <small class="text-muted text-xs d-block">Total Pokok:</small>
+                        <span class="text-xs fw-bold text-secondary">{{ formatPrice(debt.amount) }}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Countdown Tag -->
-                  <div v-if="!isPaid(debt)" class="mb-2">
-                    <span class="badge bg-light text-dark border text-xs fw-normal">
+                  <!-- Payment Progress Bar -->
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between text-xs text-muted mb-1">
+                      <span>Terbayar: {{ formatPrice(getPaidAmount(debt)) }}</span>
+                      <span class="fw-bold">{{ getProgressPercent(debt) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px; border-radius: 3px;">
+                      <div
+                        class="progress-bar bg-success"
+                        role="progressbar"
+                        :style="{ width: getProgressPercent(debt) + '%' }"
+                      ></div>
+                    </div>
+                  </div>
+
+                  <!-- Schedule & Countdown Badges -->
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    <!-- Schedule Tag -->
+                    <span v-if="getScheduleLabel(debt)" class="badge bg-light-info text-info border text-xs fw-normal">
+                      <ion-icon :icon="calendarOutline" class="me-1" />
+                      {{ getScheduleLabel(debt) }}
+                    </span>
+
+                    <!-- Countdown Tag if due date exists -->
+                    <span v-if="!isDebtPaid(debt) && debt.dueDate" class="badge bg-light text-dark border text-xs fw-normal">
                       {{ getDueDateCountdown(debt.dueDate) }}
+                    </span>
+
+                    <!-- Notes preview if any -->
+                    <span v-if="debt.notes" class="badge bg-light text-secondary border text-xs fw-normal text-truncate" style="max-width: 100%;">
+                      {{ debt.notes }}
                     </span>
                   </div>
                 </div>
 
                 <!-- Footer Actions -->
-                <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-2">
-                  <!-- Toggle Status Button -->
-                  <button 
-                    class="btn btn-sm text-xs fw-bold px-2 py-1"
-                    :class="isPaid(debt) ? 'btn-outline-warning' : 'btn-outline-success'"
-                    @click="togglePaidStatus(debt)"
-                    title="Ubah Status Pelunasan"
-                  >
-                    <ion-icon :icon="isPaid(debt) ? closeCircleOutline : checkmarkDoneOutline" class="me-1" />
-                    {{ isPaid(debt) ? 'Batal Lunas' : 'Tandai Lunas' }}
-                  </button>
+                <div class="pt-2 border-top mt-2">
+                  <div class="d-flex align-items-center justify-content-between gap-1">
+                    <!-- Primary Payment Button -->
+                    <button 
+                      class="btn btn-sm text-xs fw-bold px-2 py-1 flex-grow-1"
+                      :class="isDebtPaid(debt) ? 'btn-outline-secondary' : 'btn-primary'"
+                      @click="openPaymentModal(debt)"
+                    >
+                      <ion-icon :icon="cashOutline" class="me-1" />
+                      {{ isDebtPaid(debt) ? 'Riwayat Cicilan' : 'Bayar / Cicil' }}
+                    </button>
 
-                  <div class="d-flex align-items-center gap-1">
-                    <button class="btn btn-light btn-sm text-primary" @click="openModal(debt.id)" title="Edit">
+                    <!-- Quick Full Pay Toggle -->
+                    <button 
+                      class="btn btn-sm text-xs fw-bold px-2 py-1"
+                      :class="isDebtPaid(debt) ? 'btn-outline-warning' : 'btn-outline-success'"
+                      @click="togglePaidStatus(debt)"
+                      :title="isDebtPaid(debt) ? 'Batal Lunas' : 'Tandai Langsung Lunas'"
+                    >
+                      <ion-icon :icon="isDebtPaid(debt) ? closeCircleOutline : checkmarkDoneOutline" />
+                    </button>
+
+                    <!-- Edit & Delete -->
+                    <button class="btn btn-light btn-sm text-primary px-2 py-1" @click="openModal(debt.id)" title="Edit Utang">
                       <ion-icon :icon="pencilOutline" />
                     </button>
-                    <button class="btn btn-light btn-sm text-danger" @click="onDelete(debt.id)" title="Hapus">
+                    <button class="btn btn-light btn-sm text-danger px-2 py-1" @click="onDelete(debt.id)" title="Hapus Utang">
                       <ion-icon :icon="trashOutline" />
                     </button>
                   </div>
@@ -279,11 +367,11 @@
           </div>
 
           <!-- Empty State -->
-          <div v-else class="text-center py-5 text-muted mobile-card p-4 mx-3">
+          <div v-else class="text-center py-5 text-muted mobile-card p-4 mx-3 shadow-sm">
             <ion-icon :icon="walletOutline" style="font-size: 3.5rem; color: #cbd5e1;" />
-            <h6 class="fw-bold mt-3 text-secondary">Tidak Ada Utang Ditemukan</h6>
+            <h6 class="fw-bold mt-3 text-secondary">Tidak Ada Data Utang</h6>
             <p class="text-sm">
-              {{ searchQuery ? 'Tidak ada data utang yang cocok dengan kata kunci.' : 'Klik "Tambah Utang" untuk mencatat kewajiban utang baru.' }}
+              {{ searchQuery ? 'Tidak ada data utang yang cocok dengan filter atau kata kunci.' : 'Klik "Tambah Utang" untuk mencatat kewajiban utang baru.' }}
             </p>
             <button class="btn btn-action primary btn-sm mt-2" @click="openModal()">
               <ion-icon :icon="addOutline" class="me-1" /> Tambah Utang Pertama
@@ -297,7 +385,7 @@
             <ion-row>
               <!-- Timeline/Trend Chart -->
               <ion-col size="12" size-lg="8">
-                <ion-card class="mobile-card m-0 h-100">
+                <ion-card class="mobile-card m-0 h-100 shadow-sm">
                   <ion-card-content class="container-padded">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                       <div>
@@ -320,32 +408,32 @@
 
               <!-- Recommendations & Health Card -->
               <ion-col size="12" size-lg="4">
-                <ion-card class="mobile-card m-0 h-100">
+                <ion-card class="mobile-card m-0 h-100 shadow-sm">
                   <ion-card-content class="container-padded">
                     <h6 class="fw-bold text-dark mb-3">Analisis Kesehatan Utang</h6>
                     
                     <div class="mb-3">
                       <div class="d-flex justify-content-between text-xs mb-1">
-                        <span class="text-muted">Total Kewajiban</span>
+                        <span class="text-muted">Total Pokok Utang</span>
                         <span class="fw-bold text-dark">{{ formatPrice(summary.total) }}</span>
                       </div>
                       <div class="d-flex justify-content-between text-xs mb-1">
-                        <span class="text-muted">Telah Dilunasi</span>
+                        <span class="text-muted">Telah Dilunasi / Dicicil</span>
                         <span class="fw-bold text-success">{{ formatPrice(summary.paid) }}</span>
                       </div>
                       <div class="d-flex justify-content-between text-xs mb-1">
-                        <span class="text-muted">Tunggakan Belum Lunas</span>
-                        <span class="fw-bold text-danger">{{ formatPrice(summary.unpaid) }}</span>
+                        <span class="text-muted">Sisa Tunggakan Aktif</span>
+                        <span class="fw-bold text-danger">{{ formatPrice(summary.remaining) }}</span>
                       </div>
                     </div>
 
                     <hr class="my-3" />
 
-                    <h6 class="fw-bold text-dark text-xs text-uppercase mb-2">Saran Pelunasan</h6>
+                    <h6 class="fw-bold text-dark text-xs text-uppercase mb-2">Panduan Pengelolaan</h6>
                     <ul class="ps-3 text-xs text-muted mb-0 d-flex flex-column gap-2">
-                      <li>Utamakan pelunasan utang yang <strong>sudah terlewat jatuh tempo</strong> untuk menghindari denda/bunga tambahan.</li>
-                      <li>Alokasikan pembayaran rutin bulanan secara konsisten sebelum tanggal jatuh tempo.</li>
-                      <li>Manfaatkan fitur 1-klik "Tandai Lunas" untuk mencatat pembayaran utang secara real-time.</li>
+                      <li>Prioritaskan pelunasan utang yang <strong>terlewat batas jatuh tempo</strong> untuk menghindari denda atau beban tambahan.</li>
+                      <li>Gunakan fitur <strong>Jadwal Cicilan</strong> (Bulanan / 3 Bulan / 6 Bulan / 1 Tahun) untuk mengatur pengeluaran rutin secara disiplin.</li>
+                      <li>Gunakan tombol <strong>Bayar / Cicil</strong> untuk mencatat pembayaran bertahap atau langsung melunasi seluruh sisa tagihan.</li>
                     </ul>
                   </ion-card-content>
                 </ion-card>
@@ -356,8 +444,15 @@
       </div>
     </ion-content>
 
-    <!-- Modal Form Utang -->
+    <!-- Modal Form Utang (Tambah / Edit) -->
     <DebtModal v-model:is-open="isModalOpen" :debt-id="selectedDebtId" @saved="fetchAll" />
+
+    <!-- Modal Pembayaran & Cicilan -->
+    <DebtPaymentModal
+      v-model:is-open="isPaymentModalOpen"
+      :debt="selectedDebtForPayment"
+      @saved="fetchAll"
+    />
   </ion-page>
 </template>
 
@@ -372,10 +467,11 @@ import {
 import { 
   addOutline, trashOutline, createOutline, pencilOutline, 
   checkmarkCircleOutline, timeOutline, alertCircleOutline, walletOutline, 
-  calendarOutline, checkmarkDoneOutline, closeCircleOutline 
+  calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline 
 } from 'ionicons/icons'
 import { debtsRepo } from '../../../db/repositories'
 import DebtModal from './DebtModal.vue'
+import DebtPaymentModal from './DebtPaymentModal.vue'
 
 const VueApexCharts = defineAsyncComponent(() => import("vue3-apexcharts"))
 
@@ -385,14 +481,18 @@ export default {
     IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, 
     IonIcon, IonButtons, IonSegment, IonSegmentButton, IonLabel, 
     IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonSpinner, 
-    DebtModal, VueApexCharts 
+    DebtModal, DebtPaymentModal, VueApexCharts 
   },
   setup() {
     const activeTab = ref('dashboard')
     const loading = ref(false)
     const debts = ref([])
+    
+    // Modals
     const isModalOpen = ref(false)
     const selectedDebtId = ref(null)
+    const isPaymentModalOpen = ref(false)
+    const selectedDebtForPayment = ref(null)
 
     // Filters & Search
     const searchQuery = ref('')
@@ -402,7 +502,14 @@ export default {
     const fetchAll = async () => {
       loading.value = true
       try {
-        debts.value = await debtsRepo.getAll()
+        const data = await debtsRepo.getAll()
+        debts.value = data || []
+        
+        // If payment modal is open, refresh selectedDebtForPayment with updated item
+        if (selectedDebtForPayment.value) {
+          const updated = debts.value.find(d => d.id === selectedDebtForPayment.value.id)
+          if (updated) selectedDebtForPayment.value = updated
+        }
       } catch (err) {
         console.error('Error fetching debts:', err)
       } finally {
@@ -415,10 +522,15 @@ export default {
       isModalOpen.value = true
     }
 
+    const openPaymentModal = (debt) => {
+      selectedDebtForPayment.value = debt
+      isPaymentModalOpen.value = true
+    }
+
     const onDelete = async (id) => {
       const alert = await alertController.create({
         header: 'Konfirmasi Hapus',
-        message: 'Yakin ingin menghapus data utang ini?',
+        message: 'Yakin ingin menghapus data utang ini beserta riwayat pembayarannya?',
         buttons: [
           { text: 'Batal', role: 'cancel' },
           { 
@@ -434,13 +546,66 @@ export default {
       await alert.present()
     }
 
-    const isPaid = (debt) => {
-      return debt && (debt.status === 'Lunas' || debt.status === 'Paid')
+    // Calculations
+    const getPaidAmount = (debt) => {
+      if (!debt) return 0
+      if (Array.isArray(debt.installments) && debt.installments.length > 0) {
+        return debt.installments.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+      }
+      if (debt.status === 'Lunas' || debt.status === 'Paid') {
+        return Number(debt.amount || 0)
+      }
+      return Number(debt.paidAmount || 0)
+    }
+
+    const getRemainingAmount = (debt) => {
+      if (!debt) return 0
+      const total = Number(debt.amount || 0)
+      const paid = getPaidAmount(debt)
+      const rem = total - paid
+      return rem > 0 ? rem : 0
+    }
+
+    const getProgressPercent = (debt) => {
+      if (!debt || Number(debt.amount || 0) <= 0) return 0
+      const pct = Math.round((getPaidAmount(debt) / Number(debt.amount)) * 100)
+      return pct > 100 ? 100 : pct
+    }
+
+    const isDebtPaid = (debt) => {
+      if (!debt) return false
+      return getRemainingAmount(debt) <= 0 || debt.status === 'Lunas' || debt.status === 'Paid'
+    }
+
+    const isPartiallyPaid = (debt) => {
+      if (!debt) return false
+      return !isDebtPaid(debt) && getPaidAmount(debt) > 0
     }
 
     const togglePaidStatus = async (debt) => {
-      const newStatus = isPaid(debt) ? 'Belum Lunas' : 'Lunas'
-      await debtsRepo.update(debt.id, { ...debt, status: newStatus })
+      const currentlyPaid = isDebtPaid(debt)
+      let updatedDebt = { ...debt }
+
+      if (currentlyPaid) {
+        // Mark unpaid
+        updatedDebt.status = 'Belum Lunas'
+        updatedDebt.paidAmount = 0
+        updatedDebt.installments = []
+      } else {
+        // Mark full paid
+        const total = Number(debt.amount || 0)
+        updatedDebt.status = 'Lunas'
+        updatedDebt.paidAmount = total
+        const newInstallment = {
+          id: Date.now(),
+          amount: getRemainingAmount(debt),
+          date: new Date().toISOString().slice(0, 10),
+          notes: 'Pelunasan Cepat'
+        }
+        updatedDebt.installments = [...(debt.installments || []), newInstallment]
+      }
+
+      await debtsRepo.update(debt.id, updatedDebt)
       await fetchAll()
     }
 
@@ -471,6 +636,7 @@ export default {
     }
 
     const getDueDateCountdown = (dueDateStr) => {
+      if (!dueDateStr) return '-'
       const diff = getDueDateDiffDays(dueDateStr)
       if (diff === 999) return '-'
       if (diff < 0) return `Terlewat ${Math.abs(diff)} hari`
@@ -478,23 +644,45 @@ export default {
       return `${diff} hari lagi`
     }
 
+    const getScheduleLabel = (debt) => {
+      if (!debt || debt.paymentType !== 'installment') return null
+      const freq = debt.installmentFrequency
+      const day = debt.payDayOfMonth || 5
+      if (freq === 'monthly') return `Tgl ${day} tiap bulan`
+      if (freq === 'quarterly') return `Tiap 3 bln (tgl ${day})`
+      if (freq === 'biannual') return `Tiap 6 bln (tgl ${day})`
+      if (freq === 'annual') return `Tiap 1 thn (tgl ${day})`
+      if (freq === 'custom') return 'Cicilan Fleksibel'
+      return 'Cicilan Terjadwal'
+    }
+
+    const getStatusText = (debt) => {
+      if (isDebtPaid(debt)) return 'Lunas'
+      if (isPartiallyPaid(debt)) return `Dicicil (${getProgressPercent(debt)}%)`
+      return 'Belum Lunas'
+    }
+
     const getCardBorderClass = (debt) => {
-      if (isPaid(debt)) return 'border-success'
-      const diff = getDueDateDiffDays(debt.dueDate)
-      if (diff < 0) return 'border-danger'
-      if (diff <= 7) return 'border-warning'
+      if (isDebtPaid(debt)) return 'border-success'
+      if (debt.dueDate) {
+        const diff = getDueDateDiffDays(debt.dueDate)
+        if (diff < 0) return 'border-danger'
+        if (diff <= 7) return 'border-warning'
+      }
+      if (isPartiallyPaid(debt)) return 'border-info'
       return 'border-primary'
     }
 
     const getStatusBadgeClass = (debt) => {
-      if (isPaid(debt)) return 'bg-success text-white'
-      const diff = getDueDateDiffDays(debt.dueDate)
-      if (diff < 0) return 'bg-danger text-white'
+      if (isDebtPaid(debt)) return 'bg-success text-white'
+      if (debt.dueDate && getDueDateDiffDays(debt.dueDate) < 0) return 'bg-danger text-white'
+      if (isPartiallyPaid(debt)) return 'bg-info text-white'
       return 'bg-warning text-dark'
     }
 
     const getDueDateColorClass = (debt) => {
-      if (isPaid(debt)) return 'text-muted'
+      if (isDebtPaid(debt)) return 'text-muted'
+      if (!debt.dueDate) return 'text-muted'
       const diff = getDueDateDiffDays(debt.dueDate)
       if (diff < 0) return 'text-danger fw-bold'
       if (diff <= 7) return 'text-warning fw-bold'
@@ -505,85 +693,105 @@ export default {
     const summary = computed(() => {
       let total = 0
       let paid = 0
-      let unpaid = 0
+      let remaining = 0
       let paidCount = 0
       let unpaidCount = 0
+      let installmentCount = 0
       let dueSoonAmount = 0
       let dueSoonCount = 0
 
       debts.value.forEach(d => {
         const amt = Number(d.amount || 0)
+        const pAmt = getPaidAmount(d)
+        const rAmt = getRemainingAmount(d)
+        
         total += amt
-        if (isPaid(d)) {
-          paid += amt
+        paid += pAmt
+        remaining += rAmt
+
+        if (isDebtPaid(d)) {
           paidCount++
         } else {
-          unpaid += amt
           unpaidCount++
-          const diff = getDueDateDiffDays(d.dueDate)
-          if (diff <= 7) {
-            dueSoonAmount += amt
-            dueSoonCount++
+          if (isPartiallyPaid(d)) installmentCount++
+          if (d.dueDate) {
+            const diff = getDueDateDiffDays(d.dueDate)
+            if (diff >= 0 && diff <= 7) {
+              dueSoonAmount += rAmt
+              dueSoonCount++
+            }
           }
         }
       })
 
       return {
-        total, paid, unpaid, paidCount, unpaidCount, dueSoonAmount, dueSoonCount
+        total, paid, remaining, paidCount, unpaidCount, installmentCount, dueSoonAmount, dueSoonCount
       }
     })
 
     const overdueDebtsCount = computed(() => {
-      return debts.value.filter(d => !isPaid(d) && getDueDateDiffDays(d.dueDate) < 0).length
+      return debts.value.filter(d => !isDebtPaid(d) && d.dueDate && getDueDateDiffDays(d.dueDate) < 0).length
     })
 
     const paidPercentage = computed(() => {
       if (!summary.value.total) return 0
-      return Math.round((summary.value.paid / summary.value.total) * 100)
+      return Math.min(100, Math.round((summary.value.paid / summary.value.total) * 100))
+    })
+
+    const scheduledDebts = computed(() => {
+      return debts.value.filter(d => !isDebtPaid(d) && d.paymentType === 'installment')
     })
 
     // Filtered & Sorted Debts
     const filteredDebts = computed(() => {
       const q = searchQuery.value.toLowerCase().trim()
       let list = debts.value.filter(d => {
-        if (q && !(d.lender || '').toLowerCase().includes(q)) {
-          return false
+        if (q) {
+          const matchLender = (d.lender || '').toLowerCase().includes(q)
+          const matchNotes = (d.notes || '').toLowerCase().includes(q)
+          if (!matchLender && !matchNotes) return false
         }
-        if (statusFilter.value === 'unpaid') return !isPaid(d)
-        if (statusFilter.value === 'paid') return isPaid(d)
-        if (statusFilter.value === 'overdue') return !isPaid(d) && getDueDateDiffDays(d.dueDate) < 0
+        if (statusFilter.value === 'unpaid') return !isDebtPaid(d)
+        if (statusFilter.value === 'installment') return isPartiallyPaid(d)
+        if (statusFilter.value === 'paid') return isDebtPaid(d)
+        if (statusFilter.value === 'overdue') return !isDebtPaid(d) && d.dueDate && getDueDateDiffDays(d.dueDate) < 0
+        if (statusFilter.value === 'scheduled') return d.paymentType === 'installment'
         return true
       })
 
       return list.sort((a, b) => {
         if (sortBy.value === 'dueDateAsc') {
-          return new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime()
+          // Put items with due date first, items without due date last
+          if (!a.dueDate && b.dueDate) return 1
+          if (a.dueDate && !b.dueDate) return -1
+          if (!a.dueDate && !b.dueDate) return 0
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
         }
         if (sortBy.value === 'amountDesc') {
-          return Number(b.amount || 0) - Number(a.amount || 0)
+          return getRemainingAmount(b) - getRemainingAmount(a)
         }
         // newest default
         return (b.id || 0) - (a.id || 0)
       })
     })
 
-    // Chart 1: Top 5 Highest Debts (Bar)
+    // Chart 1: Top 5 Highest Remaining Debts (Bar)
     const topDebtsChartSeries = computed(() => {
       const top5 = [...debts.value]
-        .filter(d => !isPaid(d))
-        .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))
+        .filter(d => !isDebtPaid(d))
+        .sort((a, b) => getRemainingAmount(b) - getRemainingAmount(a))
         .slice(0, 5)
 
       return [{
-        name: 'Jumlah Utang',
-        data: top5.map(d => Number(d.amount || 0))
+        name: 'Sisa Utang',
+        data: top5.map(d => getRemainingAmount(d))
       }]
     })
 
     const topDebtsChartOptions = computed(() => {
       const top5 = [...debts.value]
-        .filter(d => !isPaid(d))
-        .sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0))
+        .filter(d => !isDebtPaid(d))
+        .sort((a, b) => getRemainingAmount(b) - getRemainingAmount(a))
         .slice(0, 5)
 
       return {
@@ -606,7 +814,8 @@ export default {
     // Chart 2: Status Donut
     const statusDonutSeries = computed(() => {
       return [
-        summary.value.unpaidCount,
+        summary.value.unpaidCount - summary.value.installmentCount,
+        summary.value.installmentCount,
         summary.value.paidCount,
         overdueDebtsCount.value
       ]
@@ -614,8 +823,8 @@ export default {
 
     const statusDonutOptions = computed(() => ({
       chart: { type: 'donut' },
-      colors: ['#f59e0b', '#10b981', '#ef4444'],
-      labels: ['Belum Lunas', 'Sudah Lunas', 'Terlewat'],
+      colors: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+      labels: ['Belum Dicicil', 'Sedang Dicicil', 'Sudah Lunas', 'Terlewat'],
       legend: { position: 'bottom' },
       dataLabels: { enabled: true }
     }))
@@ -628,7 +837,7 @@ export default {
         const date = new Date(d.dueDate)
         if (isNaN(date.getTime())) return
         const key = date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })
-        monthMap[key] = (monthMap[key] || 0) + Number(d.amount || 0)
+        monthMap[key] = (monthMap[key] || 0) + getRemainingAmount(d)
       })
 
       const categories = Object.keys(monthMap)
@@ -647,7 +856,7 @@ export default {
         const date = new Date(d.dueDate)
         if (isNaN(date.getTime())) return
         const key = date.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })
-        monthMap[key] = (monthMap[key] || 0) + Number(d.amount || 0)
+        monthMap[key] = (monthMap[key] || 0) + getRemainingAmount(d)
       })
 
       return {
@@ -665,18 +874,30 @@ export default {
 
     return {
       activeTab, loading, debts, isModalOpen, selectedDebtId,
+      isPaymentModalOpen, selectedDebtForPayment,
       searchQuery, statusFilter, sortBy, filteredDebts,
-      summary, overdueDebtsCount, paidPercentage,
+      summary, overdueDebtsCount, paidPercentage, scheduledDebts,
       topDebtsChartSeries, topDebtsChartOptions,
       statusDonutSeries, statusDonutOptions,
       dueTrendChartSeries, dueTrendChartOptions,
-      fetchAll, openModal, onDelete, togglePaidStatus, isPaid,
-      getCardBorderClass, getStatusBadgeClass, getDueDateColorClass, getDueDateCountdown,
+      fetchAll, openModal, openPaymentModal, onDelete, togglePaidStatus,
+      isDebtPaid, isPartiallyPaid, getPaidAmount, getRemainingAmount, getProgressPercent,
+      getCardBorderClass, getStatusBadgeClass, getStatusText, getDueDateColorClass,
+      getDueDateCountdown, getScheduleLabel,
       formatPrice, formatDate,
       addOutline, trashOutline, createOutline, pencilOutline,
       walletOutline, alertCircleOutline, checkmarkCircleOutline, timeOutline,
-      calendarOutline, checkmarkDoneOutline, closeCircleOutline
+      calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline
     }
   }
 }
 </script>
+
+<style scoped>
+.bg-light-primary {
+  background-color: rgba(59, 130, 246, 0.08);
+}
+.bg-light-info {
+  background-color: rgba(6, 182, 212, 0.08);
+}
+</style>
