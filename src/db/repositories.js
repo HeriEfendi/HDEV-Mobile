@@ -1,5 +1,14 @@
 import { db } from './schema';
 
+const sanitizeData = (data) => {
+  if (data === undefined || data === null) return data;
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch (e) {
+    return data;
+  }
+};
+
 // Category Repository
 export const CategoryRepository = {
   async getAll() {
@@ -10,13 +19,15 @@ export const CategoryRepository = {
   },
   async add(category) {
     // Pastikan kita tidak mengirim ID ke db.add jika ID-nya adalah auto-increment (++)
-    const categoryData = { name: category.name }; 
+    const raw = sanitizeData(category);
+    const categoryData = { name: raw.name }; 
     const id = await db.categories.add(categoryData);
     return { id, ...categoryData };
   },
   async update(id, changes) {
-    await db.categories.update(id, changes);
-    return { id, ...changes };
+    const raw = sanitizeData(changes);
+    await db.categories.update(id, raw);
+    return { id, ...raw };
   },
   async delete(id) {
     await db.categories.delete(id);
@@ -36,12 +47,14 @@ export const ProductRepository = {
     return await db.products.get(id);
   },
   async add(product) {
-    const id = await db.products.add(product);
-    return { id, ...product };
+    const raw = sanitizeData(product);
+    const id = await db.products.add(raw);
+    return { id, ...raw };
   },
   async update(id, changes) {
-    await db.products.update(id, changes);
-    return { id, ...changes };
+    const raw = sanitizeData(changes);
+    await db.products.update(id, raw);
+    return { id, ...raw };
   },
   async delete(id) {
     await db.products.delete(id);
@@ -50,26 +63,29 @@ export const ProductRepository = {
 
 const createRepo = (tableName) => ({
     async add(record) {
-    const id = await db[tableName].add({ ...record, createdAt: new Date().toISOString() });
-    return { id, ...record };
+      const raw = sanitizeData(record);
+      const id = await db[tableName].add({ ...raw, createdAt: new Date().toISOString() });
+      return { id, ...raw };
     },
     async bulkAdd(records) {
-    return db[tableName].bulkAdd(records.map(r => ({ ...r, createdAt: new Date().toISOString() })));
+      const rawRecords = sanitizeData(records);
+      return db[tableName].bulkAdd(rawRecords.map(r => ({ ...r, createdAt: new Date().toISOString() })));
     },
     async update(id, changes) {
-    return await db[tableName].update(id, { ...changes, updatedAt: new Date().toISOString() });
+      const raw = sanitizeData(changes);
+      return await db[tableName].update(id, { ...raw, updatedAt: new Date().toISOString() });
     },
     async delete(id) {
-    await db[tableName].delete(id);
+      await db[tableName].delete(id);
     },
     async getById(id) {
-    return db[tableName].get(id);
+      return db[tableName].get(id);
     },
     async getAll() {
-    return db[tableName].toArray();
+      return db[tableName].toArray();
     },
     async where(index, value) {
-    return db[tableName].where(index).equals(value).toArray();
+      return db[tableName].where(index).equals(value).toArray();
     },
 });
 
@@ -82,5 +98,6 @@ export const salesRepo = createRepo('sales');
 export const stockMutationsRepo = createRepo('stockMutations');
 export const savingAccountsRepo = createRepo('saving_accounts');
 export const savingTransactionsRepo = createRepo('saving_transactions');
+
 
 

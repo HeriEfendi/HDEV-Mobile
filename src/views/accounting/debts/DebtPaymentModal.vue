@@ -320,6 +320,7 @@ export default {
     const submitPayment = async () => {
       if (!form.amount || form.amount <= 0 || !props.debt) return
 
+      const rawDebt = JSON.parse(JSON.stringify(props.debt))
       const newInstallment = {
         id: Date.now(),
         amount: Number(form.amount),
@@ -327,13 +328,13 @@ export default {
         notes: form.notes || 'Pembayaran Cicilan'
       }
 
-      const existingInstallments = Array.isArray(props.debt.installments) ? [...props.debt.installments] : []
+      const existingInstallments = Array.isArray(rawDebt.installments) ? rawDebt.installments : []
       const updatedInstallments = [...existingInstallments, newInstallment]
       const newPaidAmount = updatedInstallments.reduce((sum, item) => sum + Number(item.amount || 0), 0)
       const newStatus = newPaidAmount >= totalAmount.value ? 'Lunas' : 'Belum Lunas'
 
       const updatedDebt = {
-        ...props.debt,
+        ...rawDebt,
         installments: updatedInstallments,
         paidAmount: newPaidAmount,
         status: newStatus
@@ -350,6 +351,7 @@ export default {
     const payFullDirectly = async () => {
       if (!props.debt || remainingAmount.value <= 0) return
 
+      const rawDebt = JSON.parse(JSON.stringify(props.debt))
       const newInstallment = {
         id: Date.now(),
         amount: remainingAmount.value,
@@ -357,12 +359,12 @@ export default {
         notes: 'Pelunasan Penuh Sisa Utang'
       }
 
-      const existingInstallments = Array.isArray(props.debt.installments) ? [...props.debt.installments] : []
+      const existingInstallments = Array.isArray(rawDebt.installments) ? rawDebt.installments : []
       const updatedInstallments = [...existingInstallments, newInstallment]
       const newPaidAmount = updatedInstallments.reduce((sum, item) => sum + Number(item.amount || 0), 0)
 
       const updatedDebt = {
-        ...props.debt,
+        ...rawDebt,
         installments: updatedInstallments,
         paidAmount: newPaidAmount,
         status: 'Lunas'
@@ -383,7 +385,8 @@ export default {
             text: 'Hapus',
             role: 'destructive',
             handler: async () => {
-              const existingInstallments = Array.isArray(props.debt.installments) ? [...props.debt.installments] : []
+              const rawDebt = JSON.parse(JSON.stringify(props.debt))
+              const existingInstallments = Array.isArray(rawDebt.installments) ? rawDebt.installments : []
               const updatedInstallments = existingInstallments.filter((item, idx) => {
                 if (item.id) return item.id !== instId
                 return idx !== instId
@@ -392,7 +395,7 @@ export default {
               const newStatus = newPaidAmount >= totalAmount.value ? 'Lunas' : 'Belum Lunas'
 
               const updatedDebt = {
-                ...props.debt,
+                ...rawDebt,
                 installments: updatedInstallments,
                 paidAmount: newPaidAmount,
                 status: newStatus

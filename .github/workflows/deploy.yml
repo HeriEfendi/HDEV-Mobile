@@ -33,14 +33,14 @@ jobs:
           branch: gh-pages
           folder: dist
 
-  ### JOB 2: Kompilasi otomatis Tauri (.exe, .deb, .pkg.tar.zst) dan Publish Release Resmi
+  ### JOB 2: Kompilasi otomatis Tauri (.exe, .deb, .rpm, .pkg.tar.zst) dan Publish Release Resmi
   build-tauri:
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: "ubuntu-latest"
-            args: "--bundles deb"
+            args: "--bundles deb,rpm"
           - platform: "windows-latest"
             args: ""
 
@@ -81,7 +81,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev zstd
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev zstd rpm
 
       - name: Install frontend dependencies
         run: npm ci
