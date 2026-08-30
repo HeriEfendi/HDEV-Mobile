@@ -24,3 +24,8 @@ dist-ssr
 *.sln
 *.sw?
 android/app/release/*
+!android/app/release/.gitkeep
+release/*
+!release/.gitkeep
+android/release/*
+!android/release/.gitkeep
