@@ -48,20 +48,20 @@
               </div>
 
               <div v-else class="cart-items-wrap mb-3">
-                <div v-for="item in cart" :key="item.productId" class="cart-item-card mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
+                <div v-for="item in cart" :key="item.id" class="cart-item-card mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
                   <div class="cart-item-info">
                     <h6 class="fw-bold text-dark mb-0 text-truncate" style="max-width: 140px;">{{ item.name }}</h6>
                     <small class="text-muted">{{ formatPrice(item.price) }}</small>
                   </div>
                   <div class="cart-item-qty d-flex align-items-center gap-1">
-                    <button class="btn btn-outline-secondary btn-sm p-1 px-2" @click="updateQty(item.productId, -1)">
+                    <button class="btn btn-outline-secondary btn-sm p-1 px-2" @click="updateQty(item.id, -1)">
                       <ion-icon :icon="removeOutline" />
                     </button>
                     <span class="fw-bold mx-1">{{ item.quantity }}</span>
-                    <button class="btn btn-outline-secondary btn-sm p-1 px-2" @click="updateQty(item.productId, 1)">
+                    <button class="btn btn-outline-secondary btn-sm p-1 px-2" @click="updateQty(item.id, 1)">
                       <ion-icon :icon="addOutline" />
                     </button>
-                    <button class="btn btn-link text-danger btn-sm p-1 ms-1" @click="removeFromCart(item.productId)">
+                    <button class="btn btn-link text-danger btn-sm p-1 ms-1" @click="removeFromCart(item.id)">
                       <ion-icon :icon="trashOutline" />
                     </button>
                   </div>
@@ -87,17 +87,17 @@
 
                 <div class="d-flex justify-content-between mb-1">
                   <span class="text-muted">Pajak (10%)</span>
-                  <span>{{ formatPrice(taxAmount) }}</span>
+                  <span>{{ formatPrice(tax) }}</span>
                 </div>
 
                 <div class="d-flex justify-content-between fs-5 fw-black text-indigo border-top pt-2 mt-2">
                   <span>Total Bayar</span>
-                  <span>{{ formatPrice(totalAmount) }}</span>
+                  <span>{{ formatPrice(grandTotal) }}</span>
                 </div>
 
                 <div class="mt-3">
                   <textarea v-model="notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Catatan transaksi (opsional)..."></textarea>
-                  <button class="btn btn-action primary w-100 py-2 fs-6" @click="openCheckoutModal">
+                  <button class="btn btn-action primary w-100 py-2 fs-6" @click="openCheckout">
                     Bayar Sekarang
                   </button>
                 </div>
@@ -529,10 +529,10 @@
       header="Hapus Transaksi"
       message="Apakah Anda yakin ingin menghapus catatan transaksi ini? Stok tidak akan dikembalikan otomatis."
       :buttons="[
-        { text: 'Batal', role: 'cancel', handler: () => { deleteSaleId = null } },
-        { text: 'Hapus', role: 'destructive', handler: () => { deleteSale() } }
+        { text: 'Batal', role: 'cancel', handler: cancelDeleteSale },
+        { text: 'Hapus', role: 'destructive', handler: deleteSale }
       ]"
-      @didDismiss="deleteSaleId = null"
+      @didDismiss="cancelDeleteSale"
     />
 
     <!-- Hidden Receipt Print Div -->
@@ -613,7 +613,7 @@
 <script>
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { ProductRepository, CategoryRepository, salesRepo, stockMutationsRepo } from '../../db/repositories'
-import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonSegment, IonSegmentButton, IonLabel, IonButtons, IonBackButton, IonModal, IonAlert, toastController, IonGrid, IonRow, IonCol, IonCard, IonCardContent } from '@ionic/vue';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonSegment, IonSegmentButton, IonLabel, IonButtons, IonBackButton, IonModal, IonAlert, toastController, IonGrid, IonRow, IonCol, IonCard, IonCardContent, onIonViewWillEnter } from '@ionic/vue';
 import { addOutline, removeOutline, trashOutline, cartOutline, basketOutline, printOutline, downloadOutline, calendarOutline, documentTextOutline, searchOutline as searchIcon } from 'ionicons/icons';
 import { readProductImage } from '../../composables/useProductImage';
 import * as XLSX from 'xlsx';
@@ -724,21 +724,49 @@ export default {
       }
     }
 
-    const decreaseQty = (item) => {
-      const existing = cart.value.find(c => c.id === item.id)
-      if (existing) {
-        existing.quantity--
-        if (existing.quantity <= 0) {
-          removeFromCart(item)
+    const clearCart = () => {
+      cart.value = []
+      discount.value = 0
+      notes.value = ''
+    }
+
+    const updateQty = (productId, delta) => {
+      const item = cart.value.find(c => c.id === productId)
+      if (!item) return
+      if (delta > 0) {
+        if (item.quantity + 1 > item.stock) {
+          showToast(`Stok tidak mencukupi! Hanya tersedia ${item.stock} unit.`, 'warning')
+          return
+        }
+        item.quantity++
+      } else {
+        item.quantity--
+        if (item.quantity <= 0) {
+          removeFromCart(item.id)
         }
       }
     }
 
-    const removeFromCart = (item) => {
-      cart.value = cart.value.filter(c => c.id !== item.id)
+    const decreaseQty = (item) => {
+      const existing = cart.value.find(c => c.id === (item?.id || item))
+      if (existing) {
+        existing.quantity--
+        if (existing.quantity <= 0) {
+          removeFromCart(existing.id)
+        }
+      }
+    }
+
+    const removeFromCart = (itemOrId) => {
+      const id = typeof itemOrId === 'object' && itemOrId !== null ? itemOrId.id : itemOrId
+      cart.value = cart.value.filter(c => c.id !== id)
     }
 
     const openCheckout = () => {
+      if (cart.value.length === 0) {
+        showToast('Keranjang belanja masih kosong!', 'warning')
+        return
+      }
       paymentMethod.value = 'cash'
       amountPaid.value = grandTotal.value
       checkoutModalVisible.value = true
@@ -854,6 +882,10 @@ export default {
 
     const confirmDeleteSale = (id) => {
       deleteSaleId.value = id
+    }
+
+    const cancelDeleteSale = () => {
+      deleteSaleId.value = null
     }
 
     const deleteSale = async () => {
@@ -1034,6 +1066,9 @@ export default {
       showToast('Laporan Excel berhasil diunduh!', 'success')
     }
 
+    onMounted(loadData)
+    onIonViewWillEnter(loadData)
+
     return {
       activeTab,
       products,
@@ -1057,12 +1092,17 @@ export default {
       subtotal,
       discountAmount,
       tax,
+      taxAmount: tax,
       grandTotal,
+      totalAmount: grandTotal,
       changeAmount,
       addToCart,
+      clearCart,
+      updateQty,
       decreaseQty,
       removeFromCart,
       openCheckout,
+      openCheckoutModal: openCheckout,
       addQuickCash,
       completeCheckout,
       openReceipt,
@@ -1071,6 +1111,7 @@ export default {
       getSaleTax,
       printReceipt,
       confirmDeleteSale,
+      cancelDeleteSale,
       deleteSale,
       formatPaymentMethod,
       formatDateTime,

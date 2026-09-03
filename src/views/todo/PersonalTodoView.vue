@@ -309,7 +309,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
-import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle, IonModal, IonButtons, IonSegment, IonSegmentButton, IonLabel, IonAlert, IonFooter, IonGrid, IonRow, IonCol, IonBadge } from '@ionic/vue';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle, IonModal, IonButtons, IonSegment, IonSegmentButton, IonLabel, IonAlert, IonFooter, IonGrid, IonRow, IonCol, IonBadge, onIonViewWillEnter } from '@ionic/vue';
 import { addOutline, trashOutline, closeOutline, searchOutline, calendarOutline, pencilOutline, ellipseOutline, timeOutline, checkmarkCircle } from 'ionicons/icons';
 import { TodoRepository } from '@/db/todoRepository'
 import AppToast from '@/components/AppToast.vue';
@@ -348,8 +348,15 @@ const metrics = ref({ total: 0, inProgress: 0, done: 0, dueToday: 0 })
 const statusChartSeries = ref([0, 0, 0])
 const priorityChartSeries = ref([{ name: 'Prioritas', data: [0, 0, 0, 0] }])
 
+const getLocalDateString = (d = new Date()) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 const updateMetrics = () => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   metrics.value = {
     total: tasks.value.length,
     inProgress: tasks.value.filter(task => task.status === 'IN PROGRESS').length,
@@ -371,7 +378,7 @@ const updateCharts = () => {
 
 const filteredTasks = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   return tasks.value.filter(task => {
     if (filterStatus.value !== 'ALL') {
       if (filterStatus.value === 'OVERDUE') {
@@ -400,7 +407,7 @@ const statusFilterOptions = [
 ]
 
 const filterCount = (status: string) => {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getLocalDateString()
   if (status === 'ALL') return tasks.value.length
   if (status === 'OVERDUE') return tasks.value.filter(t => t.due_date && t.status !== 'DONE' && t.due_date < today).length
   return tasks.value.filter(t => t.status === status).length
@@ -590,6 +597,10 @@ const getPriorityClass = (priority: string) => {
 }
 
 onMounted(async () => {
+  await refreshTasks()
+})
+
+onIonViewWillEnter(async () => {
   await refreshTasks()
 })
 </script>

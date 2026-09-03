@@ -160,24 +160,39 @@ const handleFileInput = async (e: any) => {
 };
 
 const save = () => {
+    if (props.product) {
+        props.product.featured = props.product.isFeatured ? 1 : 0;
+    }
     emit('save', props.product);
 };
 
 onMounted(async () => {
-  if (props.product.image) {
-    if (typeof props.product.image === 'string' && props.product.image.startsWith('data:')) {
-      previewUrl.value = props.product.image;
-    } else if (typeof props.product.image === 'string') {
-      previewUrl.value = await readProductImage(props.product.image);
-    } else {
-      previewUrl.value = URL.createObjectURL(props.product.image);
+  if (props.product) {
+    if (props.product.featured === 1 && props.product.isFeatured === undefined) {
+      props.product.isFeatured = true;
+    }
+    if (props.product.image) {
+      if (typeof props.product.image === 'string' && props.product.image.startsWith('data:')) {
+        previewUrl.value = props.product.image;
+      } else if (typeof props.product.image === 'string') {
+        previewUrl.value = await readProductImage(props.product.image);
+      } else {
+        previewUrl.value = URL.createObjectURL(props.product.image);
+      }
     }
   }
 });
 
 watch(() => props.isOpen, async (val) => {
-    if (val && props.product.image) {
-        previewUrl.value = await readProductImage(props.product.image);
+    if (val && props.product) {
+        if (props.product.featured === 1 && props.product.isFeatured === undefined) {
+            props.product.isFeatured = true;
+        }
+        if (props.product.image) {
+            previewUrl.value = await readProductImage(props.product.image);
+        } else {
+            previewUrl.value = null;
+        }
     } else {
         previewUrl.value = null;
     }

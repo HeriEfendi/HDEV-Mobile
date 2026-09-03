@@ -47,7 +47,7 @@ export const ReminderRepository = {
     const todayStr = todayDate()
     const limitDate = new Date()
     limitDate.setDate(limitDate.getDate() + days)
-    const limitStr = limitDate.toISOString().split('T')[0]
+    const limitStr = formatLocalDate(limitDate)
     const all: ReminderItem[] = await db.table('reminders').toArray()
     return all
       .filter(r => {
@@ -64,8 +64,15 @@ export const ReminderRepository = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+export function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function todayDate(): string {
-  return new Date().toISOString().split('T')[0]
+  return formatLocalDate(new Date())
 }
 
 /**
@@ -86,7 +93,7 @@ export function getNextOccurrence(r: ReminderItem): string | null {
         const d = new Date()
         d.setDate(d.getDate() + offset)
         if (days.includes(d.getDay())) {
-          return d.toISOString().split('T')[0]
+          return formatLocalDate(d)
         }
       }
       return null
@@ -94,23 +101,25 @@ export function getNextOccurrence(r: ReminderItem): string | null {
 
     case 'weekly': {
       // Hari dalam seminggu sama dengan hari di r.date
-      const refDate = new Date(r.date)
+      const parts = r.date.split('-').map(Number)
+      const refDate = new Date(parts[0], parts[1] - 1, parts[2])
       const targetDay = refDate.getDay()
       const now = new Date()
       const diff = (targetDay - now.getDay() + 7) % 7
       const next = new Date()
       next.setDate(now.getDate() + (diff === 0 ? 0 : diff))
-      return next.toISOString().split('T')[0]
+      return formatLocalDate(next)
     }
 
     case 'monthly': {
-      const dayOfMonth = r.recurringDayOfMonth ?? new Date(r.date).getDate()
+      const parts = r.date.split('-')
+      const dayOfMonth = r.recurringDayOfMonth ?? parseInt(parts[2] || '1', 10)
       const now = new Date()
       let candidate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
-      if (candidate.toISOString().split('T')[0] < today) {
+      if (formatLocalDate(candidate) < today) {
         candidate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth)
       }
-      return candidate.toISOString().split('T')[0]
+      return formatLocalDate(candidate)
     }
 
     case 'yearly': {
@@ -129,7 +138,8 @@ export function getNextOccurrence(r: ReminderItem): string | null {
 export function daysUntil(dateStr: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const target = new Date(dateStr)
+  const parts = dateStr.split('-').map(Number)
+  const target = new Date(parts[0], parts[1] - 1, parts[2])
   target.setHours(0, 0, 0, 0)
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 }
@@ -146,7 +156,7 @@ export function recurringLabel(r: ReminderItem): string {
   switch (r.recurringType) {
     case 'daily':   return r.recurringDays?.length ? `Mingguan (${r.recurringDays.map(d => ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d]).join(',')})` : 'Setiap Hari'
     case 'weekly':  return 'Setiap Minggu'
-    case 'monthly': return `Setiap Tgl ${r.recurringDayOfMonth ?? new Date(r.date).getDate()}`
+    case 'monthly': return `Setiap Tgl ${r.recurringDayOfMonth ?? parseInt(r.date.split('-')[2] || '1', 10)}`
     case 'yearly':  return 'Setiap Tahun'
     default:        return 'Sekali'
   }

@@ -18,10 +18,13 @@ export const CategoryRepository = {
     return await db.categories.get(id);
   },
   async add(category) {
-    // Pastikan kita tidak mengirim ID ke db.add jika ID-nya adalah auto-increment (++)
     const raw = sanitizeData(category);
-    const categoryData = { name: raw.name }; 
-    const id = await db.categories.add(categoryData);
+    const isAuto = db.categories?.schema?.primKey?.auto;
+    const categoryData = { name: raw.name };
+    if (raw.id || !isAuto) {
+      categoryData.id = raw.id || Date.now();
+    }
+    const id = await db.categories.put(categoryData);
     return { id, ...categoryData };
   },
   async update(id, changes) {
@@ -48,11 +51,17 @@ export const ProductRepository = {
   },
   async add(product) {
     const raw = sanitizeData(product);
+    if (raw.featured === undefined && raw.isFeatured !== undefined) {
+      raw.featured = raw.isFeatured ? 1 : 0;
+    }
     const id = await db.products.add(raw);
     return { id, ...raw };
   },
   async update(id, changes) {
     const raw = sanitizeData(changes);
+    if (raw.featured === undefined && raw.isFeatured !== undefined) {
+      raw.featured = raw.isFeatured ? 1 : 0;
+    }
     await db.products.update(id, raw);
     return { id, ...raw };
   },

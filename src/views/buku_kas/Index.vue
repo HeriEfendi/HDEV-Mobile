@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { onIonViewWillEnter } from '@ionic/vue'
 import { useRouter } from 'vue-router'
 import { db } from '@/db/schema'
-import { calcProjectTotals } from '@/db/bukuKasMigration'
+import { migrateProjectTransactions, calcProjectTotals } from '@/db/bukuKasMigration'
 import { IonPage, IonContent, IonGrid, IonRow, IonCol, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonCardSubtitle, IonButton, IonIcon, IonModal, IonHeader, IonToolbar, IonButtons, IonTitle, IonItem, IonLabel, IonInput, IonTextarea, IonSelect, IonSelectOption, IonProgressBar, IonBadge, IonSpinner, IonAlert, IonFooter, IonSegment, IonSegmentButton } from '@ionic/vue';
 import AppToast from '@/components/AppToast.vue';
 import { addOutline, trashOutline, pencilOutline, arrowForwardOutline, closeOutline, trendingUpOutline, trendingDownOutline, pieChartOutline, searchOutline } from 'ionicons/icons';
@@ -78,6 +78,7 @@ async function fetchProjects() {
   loading.value = true
   try {
     if (!db.isOpen()) await db.open()
+    await migrateProjectTransactions()
     const rawProjects = await db.table('projects').toArray()
 
     // Hitung totals dan lastActivity dari tabel transactions terpisah

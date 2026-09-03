@@ -531,6 +531,13 @@ export default {
     const logs = ref([]);
     const activeLog = ref(null);
     const activeBreak = ref(null);
+
+    const getLocalDateString = (d = new Date()) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     
     // Live Clocks & Timers
     const currentTimeStr = ref('');
@@ -739,7 +746,7 @@ export default {
       if (!activeLog.value) {
         // ── CLOCK IN ──
         const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
+        const dateStr = getLocalDateString(now);
         const cfg = settings.value;
 
         // Early-start snap: if arriving earlier than workStart - tolerance, clamp clockIn
@@ -933,7 +940,7 @@ export default {
     const openCorrectionModal = () => {
       correctionForm.value = {
         id: null,
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(new Date()),
         type: 'WFO',
         inTime: '08:00',
         outTime: '17:00',

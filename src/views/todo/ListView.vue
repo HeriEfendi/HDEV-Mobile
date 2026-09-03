@@ -230,7 +230,7 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
-        <FormView ref="formRef" :task="form" @save="(taskData: any) => saveTask(taskData)" @cancel="modalVisible = false" />
+        <FormView ref="formRef" :task="form" @save="saveTask" @cancel="modalVisible = false" />
       </ion-content>
       <ion-footer>
         <div style="padding: 12px; background-color: #ecf3fd;">
@@ -278,7 +278,7 @@
 
 <script lang="ts">
 import { ref, computed, onMounted, reactive, defineAsyncComponent } from 'vue'
-import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle, IonModal, IonButtons, IonCheckbox, IonSpinner, IonBadge, IonSelect, IonSelectOption, IonGrid, IonRow, IonCol, IonSegment, IonSegmentButton, IonLabel, IonAlert, IonFooter } from '@ionic/vue';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle, IonModal, IonButtons, IonCheckbox, IonSpinner, IonBadge, IonSelect, IonSelectOption, IonGrid, IonRow, IonCol, IonSegment, IonSegmentButton, IonLabel, IonAlert, IonFooter, onIonViewWillEnter } from '@ionic/vue';
 import { addOutline, trashOutline, closeOutline, searchOutline, calendarOutline, pencilOutline, ellipseOutline, timeOutline, checkmarkCircle } from 'ionicons/icons';
 import { TeamTodoRepository } from '../../db/teamTodoRepository'
 import { UsersRepository } from '../../db/usersRepository'
@@ -590,6 +590,7 @@ export default {
     }
 
     onMounted(fetchTasks)
+    onIonViewWillEnter(fetchTasks)
 
     return {
       activeTab,

@@ -113,6 +113,7 @@ db.version(10).stores({
   sales: '++id, createdAt, totalAmount, paymentMethod, amountPaid, changeAmount, items, notes',
   stockMutations: '++id, productId, type, changeQuantity, beforeStock, afterStock, createdAt, notes',
   saving_accounts: '++id, name, category',
+  saving_transactions: '++id, accountId, type, date',
   reminders: '++id, date, recurring'
 });
 

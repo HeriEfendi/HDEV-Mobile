@@ -118,7 +118,7 @@
 <script>
 import { ref, onMounted, computed, toRaw } from 'vue'
 import { ProductRepository, CategoryRepository } from '../../../db/repositories'
-import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonGrid, IonRow, IonCol, IonButtons, IonBackButton, IonAlert, IonCard, IonCardContent, toastController } from '@ionic/vue';
+import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonGrid, IonRow, IonCol, IonButtons, IonBackButton, IonAlert, IonCard, IonCardContent, toastController, onIonViewWillEnter } from '@ionic/vue';
 import { addOutline, trashOutline, createOutline, basketOutline, closeOutline } from 'ionicons/icons';
 import { readProductImage, saveProductImageFromBase64, deleteProductImage } from '../../../composables/useProductImage';
 import ProductModal from './ProductModal.vue';
@@ -153,6 +153,9 @@ export default {
       products.value = data
     }
 
+    onMounted(fetchData)
+    onIonViewWillEnter(fetchData)
+
     const filteredProducts = computed(() => {
       return products.value.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -176,19 +179,17 @@ export default {
       }
     }
 
-    onMounted(fetchData)
-
     const dialogCreate = ref(false)
     const dialogEdit = ref(false)
-    const activeProduct = ref({ name: '', price: 0, stock: 0, categoryId: null })
+    const activeProduct = ref({ name: '', price: 0, stock: 0, categoryId: null, featured: 0, isFeatured: false })
 
     const openCreate = () => {
-        activeProduct.value = { name: '', price: 0, stock: 0, categoryId: categories.value[0]?.id || null }
+        activeProduct.value = { name: '', price: 0, stock: 0, categoryId: categories.value[0]?.id || null, featured: 0, isFeatured: false }
         dialogCreate.value = true
     }
 
     const openEdit = (product) => {
-        activeProduct.value = { ...product }
+        activeProduct.value = { ...product, isFeatured: product.featured === 1 || !!product.isFeatured }
         dialogEdit.value = true
     }
 
@@ -214,6 +215,7 @@ export default {
     const saveProduct = async (product) => {
         try {
             const rawProduct = toRaw(product)
+            rawProduct.featured = (rawProduct.featured === 1 || rawProduct.isFeatured) ? 1 : 0
             
             // Handle image
             if (rawProduct.pendingBase64) {
