@@ -36,10 +36,16 @@
             </div>
 
             <div class="field-group">
-              <label class="field-label">Kategori</label>
-              <select v-model="form.category" class="form-control app-control">
+              <label class="field-label">Kategori Biaya (M-05)</label>
+              <select v-model="selectedCategoryChoice" class="form-control app-control" @change="onCategoryChange">
                 <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                <option value="__custom__">+ Kategori Kustom Baru...</option>
               </select>
+            </div>
+
+            <div v-if="selectedCategoryChoice === '__custom__'" class="field-group">
+              <label class="field-label text-primary">Tulis Nama Kategori Kustom</label>
+              <input type="text" v-model="customCategoryText" class="form-control app-control" placeholder="Contoh: Pemeliharaan Mesin, Iklan IG" />
             </div>
 
             <div class="field-group">
@@ -81,33 +87,47 @@ export default {
     const accounts = ref([])
     
     const categories = [
+      'Sewa Tempat / Kios',
+      'Listrik, Air & Internet Toko',
+      'Gaji & Uang Makan Karyawan',
+      'Transportasi & Bensin Operasional',
+      'Kemasan, Plastik & Perlengkapan Toko',
+      'Bahan Baku / Modal Kulakan',
+      'Pemasaran & Promosi',
+      'Pajak & Retribusi Usaha',
+      'Perawatan & Servis Alat Usaha',
       'Makanan & Minuman',
-      'Transportasi & Bensin',
-      'Servis Kendaraan',
-      'Kebutuhan Rumah Tangga',
-      'Amal & Sosial',
-      'Hiburan & Liburan',
-      'Tagihan & Utilitas',
       'Lain-lain'
     ]
+
+    const selectedCategoryChoice = ref('Sewa Tempat / Kios')
+    const customCategoryText = ref('')
 
     const form = ref({
       description: '',
       amount: null,
       date: new Date().toISOString().slice(0, 10),
-      category: 'Makanan & Minuman',
+      category: 'Sewa Tempat / Kios',
       accountId: null,
       savingTxId: null
     })
 
+    const onCategoryChange = () => {
+      if (selectedCategoryChoice.value !== '__custom__') {
+        form.value.category = selectedCategoryChoice.value
+      }
+    }
+
     const isEdit = computed(() => Boolean(route.params.id))
 
     const resetForm = () => {
+      selectedCategoryChoice.value = 'Sewa Tempat / Kios'
+      customCategoryText.value = ''
       form.value = {
         description: '',
         amount: null,
         date: new Date().toISOString().slice(0, 10),
-        category: 'Makanan & Minuman',
+        category: 'Sewa Tempat / Kios',
         accountId: null,
         savingTxId: null
       }
@@ -127,11 +147,20 @@ export default {
         const data = await expensesRepo.getById(Number(route.params.id))
         if (!data) return router.push('/expenses')
 
+        const cat = data.category || 'Lain-lain'
+        if (categories.includes(cat)) {
+          selectedCategoryChoice.value = cat
+          customCategoryText.value = ''
+        } else {
+          selectedCategoryChoice.value = '__custom__'
+          customCategoryText.value = cat
+        }
+
         form.value = {
           description: data.description || '',
           amount: data.amount || 0,
           date: (data.date || new Date().toISOString()).slice(0, 10),
-          category: data.category || 'Makanan & Minuman',
+          category: cat,
           accountId: data.accountId || null,
           savingTxId: data.savingTxId || null
         }
@@ -143,8 +172,13 @@ export default {
     }
 
     const onSubmit = async () => {
+      const finalCat = selectedCategoryChoice.value === '__custom__'
+        ? (customCategoryText.value.trim() || 'Lain-lain')
+        : selectedCategoryChoice.value
+
       const payload = {
         ...form.value,
+        category: finalCat,
         amount: Number(form.value.amount),
         accountId: form.value.accountId ? Number(form.value.accountId) : null
       }
@@ -205,7 +239,7 @@ export default {
 
     onIonViewWillEnter(load)
 
-    return { form, onSubmit, loaded, isEdit, categories, accounts }
+    return { form, onSubmit, loaded, isEdit, categories, accounts, selectedCategoryChoice, customCategoryText, onCategoryChange }
   }
 }
 </script>

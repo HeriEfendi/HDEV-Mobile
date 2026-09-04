@@ -28,16 +28,52 @@
           <div class="row mb-3">
             <div class="col-6">
               <div class="field-group">
-                <label class="field-label">Harga (IDR)</label>
+                <label class="field-label fw-bold text-dark">Harga Jual (IDR)</label>
                 <NumberInput v-model="product.price" placeholder="0" />
               </div>
             </div>
+            <div class="col-6">
+              <div class="field-group">
+                <label class="field-label fw-bold text-dark">Harga Modal / HPP</label>
+                <NumberInput v-model="product.costPrice" placeholder="0" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Profit Margin Preview Badge -->
+          <div v-if="product.price > 0" class="p-2 mb-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
+            <div class="text-xs">
+              <span class="text-muted d-block">Estimasi Laba Kotor:</span>
+              <strong class="text-success fs-6">
+                {{ formatPrice((product.price || 0) - (product.costPrice || 0)) }}
+              </strong>
+            </div>
+            <span class="badge" :class="calcMarginPercent(product) >= 20 ? 'bg-success' : (calcMarginPercent(product) > 0 ? 'bg-warning text-dark' : 'bg-danger')">
+              {{ calcMarginPercent(product) }}% Margin
+            </span>
+          </div>
+
+          <div class="row mb-3">
             <div class="col-6">
               <div class="field-group">
                 <label class="field-label">Stok</label>
                 <NumberInput v-model="product.stock" placeholder="0" />
               </div>
             </div>
+            <div class="col-6">
+              <div class="field-group">
+                <label class="field-label">Kode SKU / Barcode</label>
+                <input type="text" v-model="product.sku" class="form-control app-control" placeholder="PRD-001" />
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group mb-3">
+            <label class="field-label d-flex justify-content-between">
+              <span>Tanggal Kedaluwarsa (Expired Date)</span>
+              <small class="text-muted">M-04 (Opsional)</small>
+            </label>
+            <input type="date" v-model="product.expiryDate" class="form-control app-control" />
           </div>
 
           <div class="field-group mb-3">
@@ -101,6 +137,14 @@ const emit = defineEmits(['close', 'save']);
 const fileInput = ref(null); // ponytail: Hapus saat refactoring template tuntas
 const previewUrl = ref(null);
 const isProcessing = ref(false);
+
+const formatPrice = (price: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price || 0);
+
+const calcMarginPercent = (p: any) => {
+  if (!p || !p.price || p.price <= 0) return 0;
+  const margin = ((p.price - (p.costPrice || 0)) / p.price) * 100;
+  return Math.round(margin);
+};
 
 const applyBase64 = (base64: string) => {
     props.product.pendingBase64 = base64;

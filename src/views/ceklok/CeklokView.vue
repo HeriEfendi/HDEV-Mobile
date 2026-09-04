@@ -507,7 +507,8 @@ import { onIonViewWillEnter } from '@ionic/vue';
 import { 
   IonPage, IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonButton,
   IonContent, IonSegment, IonSegmentButton, IonLabel, IonIcon, IonBadge, 
-  IonModal, IonAlert, IonFooter, IonGrid, IonRow, IonCol, IonCard, IonCardContent
+  IonModal, IonAlert, IonFooter, IonGrid, IonRow, IonCol, IonCard, IonCardContent,
+  toastController
 } from '@ionic/vue';
 import { 
   settingsOutline, playOutline, stopOutline, cafeOutline, calendarOutline, 
@@ -1056,8 +1057,17 @@ export default {
     };
 
     // Excel Export
-    const exportExcel = () => {
-      if (logs.value.length === 0) return;
+    const exportExcel = async () => {
+      if (logs.value.length === 0) {
+        const toast = await toastController.create({
+          message: 'Belum ada data presensi untuk diekspor!',
+          duration: 2000,
+          color: 'warning',
+          position: 'top'
+        });
+        await toast.present();
+        return;
+      }
       
       const data = logs.value.map(log => {
         let breakDesc = '';
@@ -1089,7 +1099,14 @@ export default {
       });
       worksheet['!cols'] = Object.keys(maxLens).map(key => ({ wch: maxLens[key] + 2 }));
 
-      XLSX.writeFile(workbook, "Riwayat_Ceklok_Kerja.xlsx");
+      XLSX.writeFile(workbook, `Rekap_Presensi_Kerja_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      const toast = await toastController.create({
+        message: 'File Excel rekap presensi berhasil diunduh!',
+        duration: 2500,
+        color: 'success',
+        position: 'top'
+      });
+      await toast.present();
     };
 
     // Formatting Helpers

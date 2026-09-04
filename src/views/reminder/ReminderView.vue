@@ -5,7 +5,13 @@
         <div class="app-hero" style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <ion-title class="app-hero-title" style="padding:0;">Pengingat</ion-title>
-            <ion-buttons style="margin:0;">
+            <ion-buttons style="margin:0;" class="d-flex gap-2">
+              <button class="btn btn-action secondary btn-md" @click="templateModalOpen = true" title="Gunakan template pengingat usaha siap pakai">
+                <ion-icon :icon="sparklesOutline" class="me-1" /> Template UMKM
+              </button>
+              <button class="btn btn-action light btn-md" @click="testNotification" title="Kirim notifikasi uji coba ke perangkat">
+                <ion-icon :icon="notificationsOutline" class="me-1" /> Tes Notif
+              </button>
               <button class="btn btn-action primary btn-md" @click="openDialog()">
                 <ion-icon :icon="addOutline" class="me-1" /> Tambah
               </button>
@@ -254,6 +260,45 @@
       </ion-footer>
     </ion-modal>
 
+    <!-- Template Pengingat Siap Pakai Modal (M-09) -->
+    <ion-modal :is-open="templateModalOpen" @didDismiss="templateModalOpen = false">
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Template Pengingat UMKM</ion-title>
+          <ion-buttons slot="end">
+            <ion-button @click="templateModalOpen = false"><ion-icon :icon="closeOutline" /></ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="app-content-wrap ion-padding bg-light">
+        <p class="text-muted small mb-3">Pilih salah satu template agenda bisnis di bawah ini untuk langsung mengisi dan mengaktifkan pengingat otomatis:</p>
+
+        <div class="d-flex flex-column gap-3">
+          <div 
+            v-for="tpl in businessTemplates" 
+            :key="tpl.title" 
+            class="mobile-card p-3 cursor-pointer clickable-card border hover-shadow"
+            @click="applyBusinessTemplate(tpl)"
+          >
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-3 p-3 text-center fs-2" :style="{ background: tpl.bg || '#eff6ff' }">
+                {{ tpl.emoji }}
+              </div>
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                  <h6 class="fw-bold text-dark mb-0 fs-6">{{ tpl.title }}</h6>
+                  <span class="badge bg-primary text-xs">{{ tpl.recurrenceLabel }}</span>
+                </div>
+                <p class="text-muted text-xs mb-1">{{ tpl.description }}</p>
+                <small class="text-indigo fw-semibold">⏰ Jam Notifikasi: {{ tpl.time }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ion-content>
+    </ion-modal>
+
     <!-- Delete Alert -->
     <ion-alert
       :is-open="deleteId !== null"
@@ -277,14 +322,23 @@ import {
   IonIcon, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonCardSubtitle,
   IonModal, IonAlert, IonFooter, IonGrid, IonRow, IonCol
 } from '@ionic/vue'
-import { addOutline, pencilOutline, trashOutline, closeOutline, searchOutline, calendarOutline, notificationsOutline } from 'ionicons/icons'
+import { addOutline, pencilOutline, trashOutline, closeOutline, searchOutline, calendarOutline, notificationsOutline, sparklesOutline } from 'ionicons/icons'
 import {
   ReminderRepository, getNextOccurrence, daysUntil,
   recurringLabel, notifyModeLabel,
   type ReminderItem, type RecurringType, type NotifyMode
 } from '@/db/reminderRepository'
-import { scheduleReminderNotifications } from '@/utils/reminderNotifications'
+import { scheduleReminderNotifications, triggerTestNotification } from '@/utils/reminderNotifications'
 import AppToast from '@/components/AppToast.vue'
+
+async function testNotification() {
+  const success = await triggerTestNotification()
+  if (success) {
+    toast.value = { show: true, text: 'Notifikasi uji coba berhasil dikirim! 🔔', color: 'success' }
+  } else {
+    toast.value = { show: true, text: 'Pastikan izin notifikasi telah diberikan di pengaturan perangkat/browser.', color: 'error' }
+  }
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DAYS_OF_WEEK = [
@@ -317,12 +371,101 @@ const filterOptions = [
 // ── State ─────────────────────────────────────────────────────────────────────
 const reminders = ref<ReminderItem[]>([])
 const dialogVisible = ref(false)
+const templateModalOpen = ref(false)
 const editMode = ref(false)
 const editId = ref<number | null>(null)
 const deleteId = ref<number | null>(null)
 const searchQuery = ref('')
 const activeFilter = ref('Semua')
 const toast = ref({ show: false, text: '', color: 'success' })
+
+const businessTemplates = [
+  {
+    title: 'Setor & Lapor Pajak UMKM (PPN / PPh Final)',
+    emoji: '🏛️',
+    bg: '#fef3c7',
+    category: 'Bisnis',
+    recurrenceLabel: 'Bulanan (Tgl 15)',
+    description: 'Kewajiban pembayaran pajak UMKM bulanan sebelum tanggal 15 agar bebas denda administrasi.',
+    recurringType: 'monthly' as const,
+    recurringDayOfMonth: 15,
+    time: '09:00',
+    notifyMode: '3_days' as const
+  },
+  {
+    title: 'Stock Opname & Cek Fisik Barang',
+    emoji: '📦',
+    bg: '#eff6ff',
+    category: 'Stok',
+    recurrenceLabel: 'Mingguan (Senin)',
+    description: 'Penghitungan fisik stok barang toko vs catatan sistem untuk mendeteksi barang hilang atau rusak.',
+    recurringType: 'weekly' as const,
+    recurringDays: [1], // Senin
+    time: '08:30',
+    notifyMode: 'on_day' as const
+  },
+  {
+    title: 'Bayar Tagihan Listrik, Air & Wi-Fi Toko',
+    emoji: '💡',
+    bg: '#f0fdf4',
+    category: 'Operasional',
+    recurrenceLabel: 'Bulanan (Tgl 20)',
+    description: 'Pelunasan tagihan listrik pascabayar/token, air PDAM, dan internet toko sebelum batas akhir.',
+    recurringType: 'monthly' as const,
+    recurringDayOfMonth: 20,
+    time: '10:00',
+    notifyMode: '3_days' as const
+  },
+  {
+    title: 'Tutup Buku & Evaluasi Laba Rugi Bulanan',
+    emoji: '📊',
+    bg: '#faf5ff',
+    category: 'Keuangan',
+    recurrenceLabel: 'Bulanan (Tgl 28)',
+    description: 'Analisis omset penjualan, margin keuntungan, dan evaluasi biaya operasional bulan berjalan.',
+    recurringType: 'monthly' as const,
+    recurringDayOfMonth: 28,
+    time: '17:00',
+    notifyMode: 'on_day' as const
+  },
+  {
+    title: 'Penagihan Piutang & Kasbon Pelanggan',
+    emoji: '📥',
+    bg: '#fff7ed',
+    category: 'Keuangan',
+    recurrenceLabel: 'Mingguan (Jumat)',
+    description: 'Follow-up ramah via WhatsApp kepada pelanggan yang memiliki catatan kasbon jatuh tempo.',
+    recurringType: 'weekly' as const,
+    recurringDays: [5], // Jumat
+    time: '14:00',
+    notifyMode: 'on_day' as const
+  }
+]
+
+function applyBusinessTemplate(tpl: typeof businessTemplates[0]) {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const dateStr = `${year}-${month}-${String(tpl.recurringDayOfMonth || 15).padStart(2, '0')}`
+
+  form.value = {
+    title: tpl.title,
+    emoji: tpl.emoji,
+    category: tpl.category,
+    date: dateStr,
+    notes: tpl.description,
+    recurringType: tpl.recurringType,
+    recurringDays: tpl.recurringDays ? [...tpl.recurringDays] : [],
+    recurringDayOfMonth: tpl.recurringDayOfMonth,
+    notifyMode: tpl.notifyMode,
+    notifyTime: tpl.time
+  }
+
+  editMode.value = false
+  editId.value = null
+  templateModalOpen.value = false
+  dialogVisible.value = true
+}
 
 const defaultForm = (): Omit<ReminderItem, 'id'|'createdAt'> => ({
   title: '', emoji: '📅', category: 'Umum', date: '',

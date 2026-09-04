@@ -75,19 +75,70 @@
                   <span class="fw-bold">{{ formatPrice(subtotal) }}</span>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <span class="text-muted">Diskon (%)</span>
-                  <input type="number" min="0" max="100" v-model.number="discount" class="form-control form-control-sm text-end" style="width: 70px;" />
+                <!-- Discount Section with % / Rp Toggle & Presets (M-02) -->
+                <div class="mb-2 p-2 bg-white rounded border">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small fw-semibold">Diskon Nota</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button 
+                        type="button" 
+                        class="btn btn-xs py-0 px-2" 
+                        :class="discountType === 'percent' ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="discountType = 'percent'"
+                      >%</button>
+                      <button 
+                        type="button" 
+                        class="btn btn-xs py-0 px-2" 
+                        :class="discountType === 'fixed' ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="discountType = 'fixed'"
+                      >Rp</button>
+                    </div>
+                  </div>
+
+                  <div class="d-flex gap-2 align-items-center mb-1">
+                    <div class="input-group input-group-sm">
+                      <span class="input-group-text bg-light">{{ discountType === 'percent' ? '%' : 'Rp' }}</span>
+                      <input 
+                        type="number" 
+                        min="0" 
+                        :max="discountType === 'percent' ? 100 : subtotal" 
+                        v-model.number="discountValue" 
+                        class="form-control form-control-sm text-end fw-bold" 
+                        placeholder="0" 
+                      />
+                    </div>
+                    <button v-if="discountValue > 0" class="btn btn-sm btn-light border text-danger px-2" @click="discountValue = 0" title="Hapus Diskon">✕</button>
+                  </div>
+
+                  <!-- Quick Discount Presets -->
+                  <div class="d-flex flex-wrap gap-1 mt-1">
+                    <template v-if="discountType === 'percent'">
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 5">5%</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 10">10%</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 15">15%</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 20">20%</button>
+                    </template>
+                    <template v-else>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 5000">5k</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 10000">10k</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 20000">20k</button>
+                      <button type="button" class="btn btn-light btn-xs border py-0 px-1 text-xs" @click="discountValue = 50000">50k</button>
+                    </template>
+                  </div>
                 </div>
 
-                <div v-if="discountAmount > 0" class="d-flex justify-content-between text-danger mb-1">
+                <div v-if="discountAmount > 0" class="d-flex justify-content-between text-danger mb-1 small fw-bold">
                   <span>Potongan Diskon</span>
                   <span>-{{ formatPrice(discountAmount) }}</span>
                 </div>
 
-                <div class="d-flex justify-content-between mb-1">
-                  <span class="text-muted">Pajak (10%)</span>
-                  <span>{{ formatPrice(tax) }}</span>
+                <!-- Pajak / PPN Otomatis dari Pengaturan Toko -->
+                <div v-if="storeProfile.enableTax && currentTaxRate > 0" class="d-flex justify-content-between align-items-center mb-1 text-muted small">
+                  <span class="d-flex align-items-center gap-1">
+                    <span>Pajak / PPN ({{ currentTaxRate }}%)</span>
+                    <span class="badge bg-light text-secondary border px-1" style="font-size: 0.65rem;" title="Otomatis diterapkan dari Profil Toko">Otomatis</span>
+                  </span>
+                  <span class="fw-semibold text-dark">{{ formatPrice(tax) }}</span>
                 </div>
 
                 <div class="d-flex justify-content-between fs-5 fw-black text-indigo border-top pt-2 mt-2">
@@ -363,26 +414,40 @@
         </div>
 
         <div class="mobile-card p-3 mb-4">
-          <h6 class="fw-bold text-dark mb-3">Metode Pembayaran</h6>
-          <div class="d-flex gap-2 mb-4">
-            <button 
-              type="button" 
-              class="btn flex-fill btn-outline-teal"
-              :class="{ 'active': paymentMethod === 'cash' }"
-              @click="paymentMethod = 'cash'; amountPaid = grandTotal"
-            >Tunai</button>
-            <button 
-              type="button" 
-              class="btn flex-fill btn-outline-teal"
-              :class="{ 'active': paymentMethod === 'qris' }"
-              @click="paymentMethod = 'qris'; amountPaid = grandTotal"
-            >QRIS / E-Wallet</button>
-            <button 
-              type="button" 
-              class="btn flex-fill btn-outline-teal"
-              :class="{ 'active': paymentMethod === 'card' }"
-              @click="paymentMethod = 'card'; amountPaid = grandTotal"
-            >Debit/Kartu</button>
+          <h6 class="fw-bold text-dark mb-3">Metode Pembayaran (M-01)</h6>
+          <div class="row g-2 mb-4">
+            <div class="col-6 col-md-3">
+              <button 
+                type="button" 
+                class="btn w-100 btn-outline-teal py-2"
+                :class="{ 'active': paymentMethod === 'cash' }"
+                @click="paymentMethod = 'cash'; amountPaid = grandTotal"
+              >💵 Tunai</button>
+            </div>
+            <div class="col-6 col-md-3">
+              <button 
+                type="button" 
+                class="btn w-100 btn-outline-teal py-2"
+                :class="{ 'active': paymentMethod === 'qris' }"
+                @click="paymentMethod = 'qris'; amountPaid = grandTotal"
+              >📱 QRIS</button>
+            </div>
+            <div class="col-6 col-md-3">
+              <button 
+                type="button" 
+                class="btn w-100 btn-outline-teal py-2"
+                :class="{ 'active': paymentMethod === 'transfer' }"
+                @click="paymentMethod = 'transfer'; amountPaid = grandTotal"
+              >🏦 Transfer</button>
+            </div>
+            <div class="col-6 col-md-3">
+              <button 
+                type="button" 
+                class="btn w-100 btn-outline-teal py-2"
+                :class="{ 'active': paymentMethod === 'card' }"
+                @click="paymentMethod = 'card'; amountPaid = grandTotal"
+              >💳 Debit/Kartu</button>
+            </div>
           </div>
 
           <div v-if="paymentMethod === 'cash'">
@@ -391,13 +456,18 @@
               <NumberInput v-model="amountPaid" input-class="form-control app-control fs-6 fw-bold text-dark" />
             </div>
 
-            <!-- Quick Cash Buttons -->
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = grandTotal">Pas</button>
-              <button type="button" class="btn btn-light btn-sm border" @click="addQuickCash(10000)">+10k</button>
-              <button type="button" class="btn btn-light btn-sm border" @click="addQuickCash(20000)">+20k</button>
-              <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = 50000">50k</button>
-              <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = 100000">100k</button>
+            <!-- Enhanced Quick Cash Buttons (B-02) -->
+            <div class="mb-3">
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary btn-sm fw-bold px-3" @click="amountPaid = grandTotal">Uang Pas</button>
+                <button type="button" class="btn btn-warning btn-sm fw-bold" @click="roundUpCash">Bulatkan</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="addQuickCash(10000)">+10k</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="addQuickCash(20000)">+20k</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="addQuickCash(50000)">+50k</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = 50000">50k</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = 100000">100k</button>
+                <button type="button" class="btn btn-light btn-sm border" @click="amountPaid = 200000">200k</button>
+              </div>
             </div>
 
             <!-- Change display -->
@@ -443,12 +513,31 @@
       </ion-header>
 
       <ion-content class="ion-padding bg-light">
+        <!-- Paper Size Selector (B-01) -->
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom mx-2">
+          <span class="small text-muted fw-semibold">Format Lebar Kertas Struk:</span>
+          <div class="btn-group btn-group-sm">
+            <button 
+              type="button" 
+              class="btn btn-xs py-1 px-3"
+              :class="selectedPaperWidth === '58mm' ? 'btn-primary' : 'btn-outline-secondary'"
+              @click="selectedPaperWidth = '58mm'"
+            >58mm (Kecil)</button>
+            <button 
+              type="button" 
+              class="btn btn-xs py-1 px-3"
+              :class="selectedPaperWidth === '80mm' ? 'btn-primary' : 'btn-outline-secondary'"
+              @click="selectedPaperWidth = '80mm'"
+            >80mm (Lebar)</button>
+          </div>
+        </div>
+
         <div v-if="activeSale" class="receipt-box-card mobile-card p-4 mx-2">
           <!-- Receipt Print Header -->
           <div class="text-center border-bottom pb-3 mb-3">
-            <h4 class="fw-black mb-1 text-dark">SME Marketplace</h4>
-            <p class="text-muted small mb-0">Jl. Pembangunan No. 12, Jakarta</p>
-            <p class="text-muted small">Telp: 0812-3456-7890</p>
+            <h4 class="fw-black mb-1 text-dark">{{ storeProfile.storeName }}</h4>
+            <p class="text-muted small mb-0">{{ storeProfile.address }}</p>
+            <p class="text-muted small mb-0" v-if="storeProfile.phone">Telp/WA: {{ storeProfile.phone }}</p>
             <div class="badge bg-indigo mt-1">INV-{{ activeSale.id }}</div>
           </div>
 
@@ -485,8 +574,8 @@
               <span>Diskon ({{ activeSale.discount || 0 }}%):</span>
               <span>-{{ formatPrice(activeSale.discountAmount || getSaleDiscount(activeSale)) }}</span>
             </div>
-            <div class="d-flex justify-content-between mb-1">
-              <span>Pajak (10%):</span>
+            <div class="d-flex justify-content-between mb-1" v-if="(activeSale.taxAmount || getSaleTax(activeSale)) > 0">
+              <span>Pajak ({{ activeSale.taxRate !== undefined ? activeSale.taxRate : (storeProfile.enableTax ? storeProfile.taxRate : 0) }}%):</span>
               <span>{{ formatPrice(activeSale.taxAmount || getSaleTax(activeSale)) }}</span>
             </div>
             <div class="d-flex justify-content-between border-top pt-2 fw-black fs-5">
@@ -510,14 +599,21 @@
 
           <!-- Footer -->
           <div class="text-center pt-3 border-top text-muted small">
-            <p class="mb-0 fw-semibold">Terima Kasih atas Kunjungan Anda!</p>
-            <p>Barang yang sudah dibeli tidak dapat ditukar.</p>
+            <p class="mb-0 fw-semibold">{{ storeProfile.receiptHeader || 'Terima Kasih atas Kunjungan Anda!' }}</p>
+            <p>{{ storeProfile.receiptFooter || 'Barang yang sudah dibeli tidak dapat ditukar.' }}</p>
           </div>
         </div>
 
-        <div class="px-2 pb-4">
-          <button class="btn btn-action primary w-100 py-3 fw-bold" @click="printReceipt">
-            <ion-icon :icon="printOutline" class="me-2" /> Cetak Struk
+        <div class="px-2 pb-4 d-flex flex-column gap-2">
+          <div class="input-group">
+            <span class="input-group-text bg-white text-muted text-xs">No. WA (Opsional)</span>
+            <input type="tel" v-model="customerWaNumber" class="form-control app-control" placeholder="08123456789" />
+          </div>
+          <button class="btn btn-action success w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2" @click="shareReceiptWhatsApp">
+            <ion-icon :icon="logoWhatsapp" /> Kirim Struk ke WhatsApp
+          </button>
+          <button class="btn btn-action primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2" @click="printReceipt">
+            <ion-icon :icon="printOutline" /> Cetak Struk
           </button>
         </div>
       </ion-content>
@@ -537,12 +633,12 @@
 
     <!-- Hidden Receipt Print Div -->
     <div id="print-section" class="d-none">
-      <div v-if="activeSale" style="font-family: monospace; width: 300px; padding: 20px; color: black; background: white; font-size: 12px; line-height: 1.4;">
-        <div style="text-align: center; border-bottom: 1px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
-          <h3 style="margin: 0 0 5px; font-size: 16px;">SME MARKETPLACE</h3>
-          <p style="margin: 0;">Jl. Pembangunan No. 12, Jakarta</p>
-          <p style="margin: 0;">Telp: 0812-3456-7890</p>
-          <p style="margin: 5px 0 0;">INV-{{ activeSale.id }}</p>
+      <div v-if="activeSale" :style="{ fontFamily: 'monospace', width: selectedPaperWidth === '58mm' ? '210px' : '300px', padding: selectedPaperWidth === '58mm' ? '8px' : '18px', color: 'black', background: 'white', fontSize: selectedPaperWidth === '58mm' ? '10px' : '12px', lineHeight: '1.3' }">
+        <div style="text-align: center; border-bottom: 1px dashed black; padding-bottom: 8px; margin-bottom: 8px;">
+          <h3 :style="{ margin: '0 0 4px', fontSize: selectedPaperWidth === '58mm' ? '13px' : '16px' }">{{ storeProfile.storeName.toUpperCase() }}</h3>
+          <p style="margin: 0;">{{ storeProfile.address }}</p>
+          <p style="margin: 0;" v-if="storeProfile.phone">Telp/WA: {{ storeProfile.phone }}</p>
+          <p style="margin: 4px 0 0;">INV-{{ activeSale.id }}</p>
         </div>
 
         <div style="margin-bottom: 10px;">
@@ -579,8 +675,8 @@
             <span>Diskon ({{ activeSale.discount || 0 }}%):</span>
             <span>-{{ formatPrice(activeSale.discountAmount || getSaleDiscount(activeSale)) }}</span>
           </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>Pajak (10%):</span>
+          <div style="display: flex; justify-content: space-between;" v-if="(activeSale.taxAmount || getSaleTax(activeSale)) > 0">
+            <span>Pajak ({{ activeSale.taxRate !== undefined ? activeSale.taxRate : (storeProfile.enableTax ? storeProfile.taxRate : 0) }}%):</span>
             <span>{{ formatPrice(activeSale.taxAmount || getSaleTax(activeSale)) }}</span>
           </div>
           <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 5px;">
@@ -613,8 +709,9 @@
 <script>
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import { ProductRepository, CategoryRepository, salesRepo, stockMutationsRepo } from '../../db/repositories'
+import { businessProfile, BusinessProfileRepository } from '../../db/businessProfile'
 import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonSegment, IonSegmentButton, IonLabel, IonButtons, IonBackButton, IonModal, IonAlert, toastController, IonGrid, IonRow, IonCol, IonCard, IonCardContent, onIonViewWillEnter } from '@ionic/vue';
-import { addOutline, removeOutline, trashOutline, cartOutline, basketOutline, printOutline, downloadOutline, calendarOutline, documentTextOutline, searchOutline as searchIcon } from 'ionicons/icons';
+import { addOutline, removeOutline, trashOutline, cartOutline, basketOutline, printOutline, downloadOutline, calendarOutline, documentTextOutline, logoWhatsapp, searchOutline as searchIcon } from 'ionicons/icons';
 import { readProductImage } from '../../composables/useProductImage';
 import * as XLSX from 'xlsx';
 
@@ -639,7 +736,9 @@ export default {
     // expose icon for template
     const searchOutline = searchIcon;
     const cart = ref([])
-    const discount = ref(0)
+    const discountType = ref('percent') // 'percent' | 'fixed'
+    const discountValue = ref(0)
+    const discount = discountValue // backward compat
     const notes = ref('')
 
     // Checkout modal states
@@ -684,13 +783,31 @@ export default {
       })
     })
 
+    const storeProfile = businessProfile
+    const currentTaxRate = computed(() => (storeProfile.value?.enableTax ? (storeProfile.value.taxRate || 0) : 0))
+    const selectedPaperWidth = ref(storeProfile.value.receiptPaperWidth || '58mm')
+    const customerWaNumber = ref('')
+
     // Cart Calculations
     const cartCount = computed(() => cart.value.reduce((total, item) => total + item.quantity, 0))
     const subtotal = computed(() => cart.value.reduce((total, item) => total + (item.price * item.quantity), 0))
-    const discountAmount = computed(() => Math.round((subtotal.value * discount.value) / 100))
-    const tax = computed(() => Math.round((subtotal.value - discountAmount.value) * 0.1))
-    const grandTotal = computed(() => subtotal.value - discountAmount.value + tax.value)
+    const discountAmount = computed(() => {
+      if (discountType.value === 'percent') {
+        const pct = Math.min(Math.max(discountValue.value || 0, 0), 100)
+        return Math.round((subtotal.value * pct) / 100)
+      } else {
+        return Math.min(Math.max(discountValue.value || 0, 0), subtotal.value)
+      }
+    })
+    const tax = computed(() => Math.round((subtotal.value - discountAmount.value) * (currentTaxRate.value / 100)))
+    const grandTotal = computed(() => Math.max(0, subtotal.value - discountAmount.value + tax.value))
     const changeAmount = computed(() => amountPaid.value - grandTotal.value)
+
+    const roundUpCash = () => {
+      if (grandTotal.value <= 0) return
+      const step = grandTotal.value >= 100000 ? 50000 : 10000
+      amountPaid.value = Math.ceil(grandTotal.value / step) * step
+    }
 
     const showToast = async (msg, color = 'success') => {
       const toast = await toastController.create({
@@ -718,6 +835,7 @@ export default {
           id: product.id,
           name: product.name,
           price: product.price,
+          costPrice: product.costPrice || 0,
           stock: product.stock,
           quantity: 1
         })
@@ -726,7 +844,7 @@ export default {
 
     const clearCart = () => {
       cart.value = []
-      discount.value = 0
+      discountValue.value = 0
       notes.value = ''
     }
 
@@ -792,22 +910,29 @@ export default {
       }
 
       // Save transaction first
+      const totalCostCalc = cart.value.reduce((sum, c) => sum + ((c.costPrice || 0) * c.quantity), 0)
       const saleRecord = {
         items: cart.value.map(c => ({
           productId: c.id,
           name: c.name,
           price: c.price,
+          costPrice: c.costPrice || 0,
           quantity: c.quantity
         })),
         subtotal: subtotal.value,
-        discount: discount.value,
+        discount: discountValue.value,
+        discountType: discountType.value,
         discountAmount: discountAmount.value,
         taxAmount: tax.value,
+        taxRate: currentTaxRate.value,
         totalAmount: grandTotal.value,
+        totalCost: totalCostCalc,
+        profit: grandTotal.value - totalCostCalc,
         paymentMethod: paymentMethod.value,
         amountPaid: amountPaid.value,
         changeAmount: changeAmount.value,
-        notes: notes.value
+        notes: notes.value,
+        paperWidth: selectedPaperWidth.value
       }
 
       const savedSale = await salesRepo.add(saleRecord)
@@ -831,7 +956,7 @@ export default {
 
       // Clear POS cart states
       cart.value = []
-      discount.value = 0
+      discountValue.value = 0
       notes.value = ''
       amountPaid.value = 0
 
@@ -850,25 +975,44 @@ export default {
 
     const getSaleSubtotal = (sale) => sale.subtotal || sale.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const getSaleDiscount = (sale) => sale.discountAmount || Math.round((getSaleSubtotal(sale) * (sale.discount || 0)) / 100)
-    const getSaleTax = (sale) => sale.taxAmount || Math.round((getSaleSubtotal(sale) - getSaleDiscount(sale)) * 0.1)
+    const getSaleTax = (sale) => {
+      if (sale.taxAmount !== undefined && sale.taxAmount !== null) return sale.taxAmount
+      if (sale.taxRate && sale.taxRate > 0) {
+        return Math.round((getSaleSubtotal(sale) - getSaleDiscount(sale)) * (sale.taxRate / 100))
+      }
+      return 0
+    }
 
     const printReceipt = () => {
       // Show hidden print div for printing, run print, then hide it
       const printSection = document.getElementById('print-section')
       if (printSection) {
-        const originalContent = document.body.innerHTML
         const printContent = printSection.innerHTML
+        const is58 = selectedPaperWidth.value === '58mm'
+        const printWidth = is58 ? '58mm' : '80mm'
+        const bodyWidth = is58 ? '48mm' : '72mm'
+        const fontSize = is58 ? '10px' : '12px'
         
-        // We can open a small popup window and print to avoid breaking vue instance
-        const popupWin = window.open('', '_blank', 'width=350,height=600')
+        const popupWin = window.open('', '_blank', 'width=380,height=600')
         popupWin.document.open()
         popupWin.document.write(`
           <html>
             <head>
               <title>Print Receipt</title>
               <style>
-                body { margin: 0; padding: 20px; font-family: monospace; }
-                @media print { body { padding: 0; } }
+                @page { size: ${printWidth} auto; margin: 0; }
+                body { 
+                  margin: 0 auto; 
+                  padding: 8px; 
+                  width: ${bodyWidth}; 
+                  font-family: 'Courier New', Courier, monospace; 
+                  font-size: ${fontSize}; 
+                  line-height: 1.3;
+                  color: #000;
+                }
+                @media print { 
+                  body { margin: 0 auto; padding: 4px; } 
+                }
               </style>
             </head>
             <body onload="window.print();window.close();">
@@ -878,6 +1022,41 @@ export default {
         `)
         popupWin.document.close()
       }
+    }
+
+    const shareReceiptWhatsApp = () => {
+      if (!activeSale.value) return
+      const s = activeSale.value
+      const store = storeProfile.value
+      let text = `🧾 *STRUK PEMBAYARAN*\n`
+      text += `🏪 *${store.storeName}*\n`
+      if (store.address) text += `📍 ${store.address}\n`
+      if (store.phone) text += `📞 Telp/WA: ${store.phone}\n`
+      text += `--------------------------------\n`
+      text += `No. Nota: INV-${s.id}\n`
+      text += `Tanggal : ${formatDateTime(s.createdAt)}\n`
+      text += `Metode  : ${formatPaymentMethod(s.paymentMethod)}\n`
+      text += `--------------------------------\n`
+      s.items.forEach(it => {
+        text += `• ${it.name}\n  ${it.quantity} x ${formatPrice(it.price)} = ${formatPrice(it.quantity * it.price)}\n`
+      })
+      text += `--------------------------------\n`
+      text += `Subtotal : ${formatPrice(s.subtotal || getSaleSubtotal(s))}\n`
+      if ((s.discountAmount || 0) > 0) text += `Diskon   : -${formatPrice(s.discountAmount)}\n`
+      if ((s.taxAmount || 0) > 0) text += `Pajak (${s.taxRate !== undefined ? s.taxRate : (store.taxRate || 0)}%): ${formatPrice(s.taxAmount)}\n`
+      text += `*TOTAL   : ${formatPrice(s.totalAmount)}*\n`
+      text += `Bayar    : ${formatPrice(s.amountPaid)}\n`
+      text += `Kembali  : ${formatPrice(s.changeAmount)}\n`
+      text += `--------------------------------\n`
+      if (store.receiptFooter) text += `${store.receiptFooter}\n`
+
+      let cleanPhone = (customerWaNumber.value || '').replace(/\D/g, '')
+      if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1)
+
+      const url = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`
+        : `https://wa.me/?text=${encodeURIComponent(text)}`
+      window.open(url, '_blank')
     }
 
     const confirmDeleteSale = (id) => {
@@ -891,15 +1070,16 @@ export default {
     const deleteSale = async () => {
       if (deleteSaleId.value !== null) {
         await salesRepo.delete(deleteSaleId.value)
-        showToast('Transaksi penjualan berhasil dihapus!', 'success')
         deleteSaleId.value = null
         await loadData()
+        showToast('Transaksi berhasil dihapus.', 'warning')
       }
     }
 
     const formatPaymentMethod = (method) => {
       if (method === 'cash') return 'Tunai'
       if (method === 'qris') return 'QRIS'
+      if (method === 'transfer') return 'Transfer Bank'
       if (method === 'card') return 'Debit/Kartu'
       return method
     }
@@ -1045,7 +1225,8 @@ export default {
             'Subtotal Item': item.price * item.quantity,
             'Diskon Transaksi (%)': sale.discount || 0,
             'Diskon Transaksi (IDR)': sale.discountAmount || 0,
-            'Pajak Transaksi (10%)': sale.taxAmount || 0,
+            'Pajak Transaksi (PPN)': sale.taxAmount || 0,
+            'Tarif Pajak (%)': sale.taxRate !== undefined ? sale.taxRate : 0,
             'Total Akhir Transaksi': sale.totalAmount,
             'Uang Diterima': sale.amountPaid,
             'Uang Kembalian': sale.changeAmount,
@@ -1078,6 +1259,10 @@ export default {
       selectedCategory,
       cart,
       discount,
+      discountType,
+      discountValue,
+      roundUpCash,
+      selectedPaperWidth,
       notes,
       checkoutModalVisible,
       paymentMethod,
@@ -1129,7 +1314,12 @@ export default {
       downloadOutline,
       calendarOutline,
       documentTextOutline,
-      searchOutline
+      searchOutline,
+      storeProfile,
+      currentTaxRate,
+      customerWaNumber,
+      shareReceiptWhatsApp,
+      logoWhatsapp
     }
   }
 }

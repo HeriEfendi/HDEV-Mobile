@@ -3,9 +3,41 @@
     <ion-content class="home-page">
       <section class="home-hero">
         <div>
-          <p class="hero-eyebrow">Dashboard</p>
+          <p class="hero-eyebrow">{{ storeProfile.storeName }}</p>
           <h1>Halo, mau kelola apa hari ini?</h1>
-          <p class="hero-subtitle">Akses cepat semua modul kerja dan catatan bisnis dalam satu tempat.</p>
+          <p class="hero-subtitle">{{ storeProfile.tagline || 'Akses cepat semua modul kerja dan catatan bisnis dalam satu tempat.' }}</p>
+        </div>
+
+        <!-- Business Metric Snapshot Cards -->
+        <div class="row g-2 mt-3">
+          <div class="col-6 col-md-3">
+            <div class="kpi-mini-card">
+              <span class="kpi-label">Penjualan Hari Ini</span>
+              <div class="kpi-val text-white">{{ formatPrice(kpi.salesToday) }}</div>
+              <small class="kpi-sub">{{ kpi.countToday }} transaksi</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="kpi-mini-card">
+              <span class="kpi-label">Est. Laba Hari Ini</span>
+              <div class="kpi-val text-emerald-light">+{{ formatPrice(kpi.profitToday) }}</div>
+              <small class="kpi-sub">Laba kotor penjualan</small>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="kpi-mini-card">
+              <span class="kpi-label">Stok Perlu Restock</span>
+              <div class="kpi-val" :class="kpi.lowStockCount > 0 ? 'text-warning' : 'text-white'">{{ kpi.lowStockCount }} Item</div>
+              <router-link to="/stock" class="kpi-sub text-white text-decoration-underline">Cek stok &rarr;</router-link>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="kpi-mini-card">
+              <span class="kpi-label">Jatuh Tempo Segera</span>
+              <div class="kpi-val" :class="kpi.dueDebtsCount > 0 ? 'text-danger fw-bold' : 'text-white'">{{ kpi.dueDebtsCount }} Catatan</div>
+              <router-link to="/debts" class="kpi-sub text-white text-decoration-underline">Cek utang/piutang &rarr;</router-link>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -223,10 +255,11 @@ import {
   personOutline, cashOutline, timeOutline, cartOutline, layersOutline,
   informationCircleOutline, settingsOutline, closeOutline, reorderTwoOutline,
   alarmOutline, calendarOutline, journalOutline, arrowUpCircleOutline,
-  cardOutline, listOutline, peopleOutline, cloudDownloadOutline
+  cardOutline, listOutline, peopleOutline, cloudDownloadOutline, storefrontOutline
 } from 'ionicons/icons'
 
 import { ReminderRepository, getNextOccurrence, daysUntil } from '@/db/reminderRepository'
+import { businessProfile } from '@/db/businessProfile'
 
 const STORAGE_KEY = 'home_menu_settings'
 
@@ -243,7 +276,7 @@ const ALL_MENU = [
   { name: 'Tabungan', path: '/savings', icon: walletOutline, count: 0, description: 'Simpanan dana', accent: 'var(--color-yellow)', visible: true },
   { name: 'Pengeluaran', path: '/expenses', icon: cashOutline, count: 0, description: 'Keluar dana', accent: 'var(--color-orange)', visible: true },
   { name: 'Pendapatan', path: '/incomes', icon: arrowUpCircleOutline, count: 0, description: 'Dana masuk', accent: 'var(--color-emerald)', visible: true },
-  { name: 'Utang', path: '/debts', icon: cardOutline, count: 0, description: 'Catatan utang', accent: 'var(--color-purple)', visible: true },
+  { name: 'Utang & Piutang', path: '/debts', icon: cardOutline, count: 0, description: 'Catatan utang & kasbon', accent: 'var(--color-purple)', visible: true },
 
   // Supply Chain
   { name: 'Kasir (POS)', path: '/cashier', icon: cartOutline, count: 0, description: 'Penjualan & Kasir', accent: 'var(--color-emerald)', visible: true },
@@ -255,7 +288,7 @@ const ALL_MENU = [
   { name: 'Users', path: '/users', icon: peopleOutline, count: 0, description: 'Data pengguna', accent: 'var(--color-teal-deep)', visible: true },
   { name: 'Backup & Restore', path: '/backup-restore', icon: cloudDownloadOutline, description: 'Ekspor & Impor Database', accent: 'var(--color-indigo)', visible: true },
   { name: 'Tentang Aplikasi', path: '/about', icon: informationCircleOutline, description: 'Tentang & Developer', accent: 'var(--color-sky)', visible: true },
-  { name: 'Profile', path: '/profile', icon: personOutline, description: 'Data profil', accent: 'var(--color-blue-deep)', visible: true },
+  { name: 'Profil Usaha', path: '/profile', icon: storefrontOutline, description: 'Pengaturan toko & struk', accent: 'var(--color-blue-deep)', visible: true },
 ]
 
 export default {
@@ -266,6 +299,18 @@ export default {
     IonButton, IonToggle, IonFooter
   },
   setup() {
+    const storeProfile = businessProfile
+
+    const kpi = ref({
+      salesToday: 0,
+      countToday: 0,
+      profitToday: 0,
+      lowStockCount: 0,
+      dueDebtsCount: 0
+    })
+
+    const formatPrice = (price) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price || 0)
+
     // ── Menu state ─────────────────────────────────────────────────────────
     const menuItems = ref(loadSettings())
 
@@ -407,14 +452,32 @@ export default {
         const allProducts = await ProductRepository.getAll().catch(() => [])
         const lowStockItems = allProducts.filter(p => p.stock !== null && p.stock !== undefined && p.stock <= 10)
 
-        updateCount('/cashier', (await salesRepo.getAll().catch(() => [])).length)
-        updateCount('/savings', (await savingAccountsRepo.getAll().catch(() => [])).length)
-        updateCount('/expenses', (await expensesRepo.getAll().catch(() => [])).length)
-        updateCount('/incomes', (await incomesRepo.getAll().catch(() => [])).length)
-        updateCount('/debts', (await debtsRepo.getAll().catch(() => [])).length)
-        updateCount('/categories', (await CategoryRepository.getAll().catch(() => [])).length)
-        updateCount('/products', allProducts.length)
-        updateCount('/stock', lowStockItems.length)
+        const allSales = await salesRepo.getAll().catch(() => [])
+        const todayStr = new Date().toISOString().slice(0, 10)
+        const todaySales = allSales.filter(s => s.createdAt && s.createdAt.startsWith(todayStr))
+        const salesToday = todaySales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0)
+        const profitToday = todaySales.reduce((sum, s) => {
+          if (s.profit !== undefined) return sum + Number(s.profit)
+          const cost = s.totalCost || (Array.isArray(s.items) ? s.items.reduce((is, it) => is + ((it.costPrice || 0) * it.quantity), 0) : 0)
+          return sum + (Number(s.totalAmount || 0) - cost)
+        }, 0)
+
+        const allDebts = await debtsRepo.getAll().catch(() => [])
+        const dueDebts = allDebts.filter(d => {
+          if (d.status === 'Lunas' || d.status === 'Paid') return false
+          if (!d.dueDate) return false
+          const diffMs = new Date(d.dueDate).getTime() - new Date().getTime()
+          const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+          return diffDays <= 7
+        })
+
+        kpi.value = {
+          salesToday,
+          countToday: todaySales.length,
+          profitToday,
+          lowStockCount: lowStockItems.length,
+          dueDebtsCount: dueDebts.length
+        }
       } catch (e) {
         console.error('Gagal memuat count:', e)
       }
@@ -468,6 +531,9 @@ export default {
 
     return {
       visibleMenuItems,
+      storeProfile,
+      kpi,
+      formatPrice,
       settingsOpen, settingsItems,
       openSettings, saveSettings, resetSettings,
       dragIndex, onDragStart, onDragOver, onDragEnd,
@@ -481,6 +547,44 @@ export default {
 </script>
 
 <style scoped>
+/* ── Business KPI Snapshot ────────────────────────────── */
+.kpi-mini-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.kpi-mini-card:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+}
+.kpi-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.kpi-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.kpi-sub {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 3px;
+}
+.text-emerald-light {
+  color: #6ee7b7 !important;
+}
+
 /* ── FAB Gear ─────────────────────────────────────────── */
 .fab-gear {
   position: fixed;

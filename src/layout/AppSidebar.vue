@@ -70,7 +70,7 @@ export default {
           { label: 'Tabungan', path: '/savings', icon: walletOutline, desc: 'Modal usaha', accent: '#d97706' },
           { label: 'Pengeluaran', path: '/expenses', icon: arrowDownCircleOutline, desc: 'Dana keluar', accent: '#dc2626' },
           { label: 'Pendapatan', path: '/incomes', icon: arrowUpCircleOutline, desc: 'Dana masuk', accent: '#16a34a' },
-          { label: 'Utang', path: '/debts', icon: cardOutline, desc: 'Catatan utang', accent: '#9333ea' },
+          { label: 'Utang & Piutang', path: '/debts', icon: cardOutline, desc: 'Catatan utang & kasbon', accent: '#9333ea' },
         ],
       },
       {
@@ -88,7 +88,7 @@ export default {
           { label: 'Users', path: '/users', icon: peopleOutline, desc: 'Data pengguna', accent: '#0f766e' },
           { label: 'Backup & Restore', path: '/backup-restore', icon: cloudDownloadOutline, desc: 'Ekspor & Impor Database', accent: '#6366f1' },
           { label: 'Tentang Aplikasi', path: '/about', icon: informationCircleOutline, desc: 'Tentang & Developer', accent: '#0ea5e9' },
-          { label: 'Profile', path: '/profile', icon: personOutline, desc: 'Data profil', accent: '#0ea5e9' },
+          { label: 'Profil Usaha', path: '/profile', icon: personOutline, desc: 'Identitas toko & struk', accent: '#0ea5e9' },
         ],
       },
     ]

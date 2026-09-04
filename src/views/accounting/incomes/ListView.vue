@@ -23,6 +23,9 @@
           <ion-segment-button value="riwayat">
             <ion-label>Riwayat & Detail</ion-label>
           </ion-segment-button>
+          <ion-segment-button value="labarugi">
+            <ion-label>Laba Rugi</ion-label>
+          </ion-segment-button>
         </ion-segment>
       </div>
     </ion-header>
@@ -135,6 +138,121 @@
           <p>Tidak ada pendapatan ditemukan.</p>
         </div>
       </div>
+
+      <!-- LABA RUGI TAB -->
+      <div v-show="activeTab === 'labarugi'" class="ion-padding">
+        <!-- Periode selector -->
+        <div class="d-flex gap-2 mx-2 mb-3 overflow-x-auto pb-1">
+          <button
+            type="button"
+            class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+            :class="plPeriod === 'this_month' ? 'btn-primary' : 'btn-outline-secondary bg-white'"
+            @click="plPeriod = 'this_month'"
+          >
+            Bulan Ini
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+            :class="plPeriod === 'last_month' ? 'btn-primary' : 'btn-outline-secondary bg-white'"
+            @click="plPeriod = 'last_month'"
+          >
+            Bulan Lalu
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+            :class="plPeriod === 'this_year' ? 'btn-primary' : 'btn-outline-secondary bg-white'"
+            @click="plPeriod = 'this_year'"
+          >
+            Tahun Ini
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+            :class="plPeriod === 'all' ? 'btn-primary' : 'btn-outline-secondary bg-white'"
+            @click="plPeriod = 'all'"
+          >
+            Semua Waktu
+          </button>
+        </div>
+
+        <!-- Net Profit Hero Card -->
+        <div class="mobile-card p-4 mx-2 mb-4 border-0 shadow-lg text-white position-relative overflow-hidden" :style="{ background: plData.netProfit >= 0 ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' }">
+          <small class="text-white-50 d-block text-uppercase fw-bold">LABA / RUGI BERSIH (NET PROFIT)</small>
+          <div class="fs-2 fw-black mt-1">{{ formatPrice(plData.netProfit) }}</div>
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-white border-opacity-25 text-xs text-white-50">
+            <span>Status: <strong class="text-white">{{ plData.netProfit >= 0 ? 'Surplus / Untung' : 'Defisit / Rugi' }}</strong></span>
+            <span>Margin Bersih: <strong class="text-white">{{ plData.netMargin }}%</strong></span>
+          </div>
+        </div>
+
+        <!-- Profit & Loss Statement Table -->
+        <div class="mobile-card p-3 mx-2 mb-4">
+          <h6 class="fw-bold text-dark mb-3">Laporan Laba Rugi Terpadu</h6>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                <!-- Pendapatan -->
+                <tr class="table-light">
+                  <th colspan="2" class="text-dark fw-bold">1. PENDAPATAN USAHA (REVENUE)</th>
+                </tr>
+                <tr>
+                  <td class="ps-3 text-muted">Penjualan Kasir POS ({{ plData.periodSalesCount }} Transaksi)</td>
+                  <td class="text-end fw-semibold text-dark">{{ formatPrice(plData.totalSalesPOS) }}</td>
+                </tr>
+                <tr>
+                  <td class="ps-3 text-muted">Pendapatan Lain-lain</td>
+                  <td class="text-end fw-semibold text-dark">{{ formatPrice(plData.totalIncomes) }}</td>
+                </tr>
+                <tr class="border-bottom">
+                  <td class="ps-3 fw-bold text-primary">TOTAL PENDAPATAN KOTOR</td>
+                  <td class="text-end fw-bold text-primary">{{ formatPrice(plData.totalRevenue) }}</td>
+                </tr>
+
+                <!-- HPP -->
+                <tr class="table-light">
+                  <th colspan="2" class="text-dark fw-bold">2. HARGA POKOK PENJUALAN (HPP)</th>
+                </tr>
+                <tr>
+                  <td class="ps-3 text-muted">Beban Modal Barang Terjual Kasir</td>
+                  <td class="text-end fw-semibold text-danger">-{{ formatPrice(plData.totalHPP) }}</td>
+                </tr>
+                <tr class="border-bottom">
+                  <td class="ps-3 fw-bold text-dark">LABA KOTOR (GROSS PROFIT)</td>
+                  <td class="text-end fw-bold text-success">{{ formatPrice(plData.grossProfit) }}</td>
+                </tr>
+
+                <!-- Pengeluaran Operasional -->
+                <tr class="table-light">
+                  <th colspan="2" class="text-dark fw-bold">3. BEBAN OPERASIONAL (EXPENSES)</th>
+                </tr>
+                <tr v-for="(amt, cat) in plData.expenseByCategory" :key="cat">
+                  <td class="ps-3 text-muted">Biaya {{ cat }}</td>
+                  <td class="text-end text-danger">-{{ formatPrice(amt) }}</td>
+                </tr>
+                <tr v-if="Object.keys(plData.expenseByCategory).length === 0">
+                  <td class="ps-3 text-muted fst-italic">Belum ada catatan biaya operasional</td>
+                  <td class="text-end text-muted">Rp 0</td>
+                </tr>
+                <tr class="border-bottom">
+                  <td class="ps-3 fw-bold text-danger">TOTAL BEBAN OPERASIONAL</td>
+                  <td class="text-end fw-bold text-danger">-{{ formatPrice(plData.totalExpenses) }}</td>
+                </tr>
+
+                <!-- Hasil Akhir -->
+                <tr class="table-primary fw-black">
+                  <td class="fs-6 text-dark">LABA / RUGI BERSIH AKHIR</td>
+                  <td class="text-end fs-6" :class="plData.netProfit >= 0 ? 'text-success' : 'text-danger'">
+                    {{ formatPrice(plData.netProfit) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </ion-content>
     
     <IncomeModal v-model:is-open="isModalOpen" :income-id="selectedIncomeId" @saved="fetchAll" />
@@ -145,7 +263,7 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import { onIonViewWillEnter, IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonIcon, IonButtons, IonSegment, IonSegmentButton, IonLabel, IonGrid, IonRow, IonCol, IonCard, IonCardContent, alertController } from '@ionic/vue';
 import { addOutline, trashOutline, createOutline } from 'ionicons/icons';
-import { incomesRepo } from '../../../db/repositories'
+import { incomesRepo, salesRepo, expensesRepo } from '../../../db/repositories'
 import IncomeModal from './IncomeModal.vue'
 
 const VueApexCharts = defineAsyncComponent(() => import("vue3-apexcharts"));
@@ -156,12 +274,19 @@ export default {
   setup() {
     const activeTab = ref('dashboard')
     const incomes = ref([])
+    const sales = ref([])
+    const expenses = ref([])
     const isModalOpen = ref(false)
     const selectedIncomeId = ref(null)
     const filterSearch = ref('')
     const filterCategory = ref('')
+    const plPeriod = ref('this_month')
 
-    const fetchAll = async () => { incomes.value = await incomesRepo.getAll() }
+    const fetchAll = async () => {
+      incomes.value = await incomesRepo.getAll()
+      sales.value = await salesRepo.getAll()
+      expenses.value = await expensesRepo.getAll()
+    }
     
     const openModal = (id = null) => {
       selectedIncomeId.value = id
@@ -324,8 +449,80 @@ export default {
       tooltip: { y: { formatter: (val) => formatPrice(val) } }
     }))
 
+    // Profit & Loss calculation
+    const plData = computed(() => {
+      const now = new Date()
+      const isDateInPeriod = (dateStr) => {
+        if (!dateStr) return false
+        const d = new Date(dateStr)
+        if (plPeriod.value === 'this_month') {
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+        }
+        if (plPeriod.value === 'last_month') {
+          const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1
+          const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+          return d.getFullYear() === year && d.getMonth() === lastMonth
+        }
+        if (plPeriod.value === 'this_year') {
+          return d.getFullYear() === now.getFullYear()
+        }
+        return true
+      }
+
+      // 1. Sales POS
+      const periodSales = sales.value.filter(s => isDateInPeriod(s.createdAt))
+      const totalSalesPOS = periodSales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0)
+      const totalHPP = periodSales.reduce((sum, s) => {
+        if (s.totalCost) return sum + Number(s.totalCost)
+        if (Array.isArray(s.items)) {
+          return sum + s.items.reduce((iSum, it) => iSum + ((Number(it.costPrice) || 0) * Number(it.quantity || 1)), 0)
+        }
+        return sum
+      }, 0)
+
+      // 2. Incomes
+      const periodIncomes = incomes.value.filter(i => isDateInPeriod(i.date))
+      const totalIncomes = periodIncomes.reduce((sum, i) => sum + Number(i.amount || 0), 0)
+
+      const totalRevenue = totalSalesPOS + totalIncomes
+      const grossProfit = totalRevenue - totalHPP
+
+      // 3. Expenses
+      const periodExpenses = expenses.value.filter(e => isDateInPeriod(e.date || e.createdAt))
+      const totalExpenses = periodExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+
+      const netProfit = grossProfit - totalExpenses
+      const netMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0
+
+      const expenseByCategory = {}
+      periodExpenses.forEach(e => {
+        const cat = e.category || 'Operasional'
+        expenseByCategory[cat] = (expenseByCategory[cat] || 0) + Number(e.amount || 0)
+      })
+
+      return {
+        totalSalesPOS,
+        totalIncomes,
+        totalRevenue,
+        totalHPP,
+        grossProfit,
+        totalExpenses,
+        netProfit,
+        netMargin,
+        periodSalesCount: periodSales.length,
+        expenseByCategory
+      }
+    })
+
     onIonViewWillEnter(fetchAll)
-    return { activeTab, incomes, onDelete, formatPrice, formatDate, addOutline, trashOutline, createOutline, summary, openModal, isModalOpen, selectedIncomeId, fetchAll, filterSearch, filterCategory, allCategories, filteredIncomes, dailyChartSeries, dailyChartOptions, monthlyChartSeries, monthlyChartOptions, donutSeries, donutOptions, weeklyChartSeries, weeklyChartOptions }
+    return {
+      activeTab, incomes, sales, expenses, onDelete, formatPrice, formatDate,
+      addOutline, trashOutline, createOutline, summary, openModal, isModalOpen,
+      selectedIncomeId, fetchAll, filterSearch, filterCategory, allCategories,
+      filteredIncomes, dailyChartSeries, dailyChartOptions, monthlyChartSeries,
+      monthlyChartOptions, donutSeries, donutOptions, weeklyChartSeries,
+      weeklyChartOptions, plPeriod, plData
+    }
   }
 }
 </script>

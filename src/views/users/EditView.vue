@@ -15,15 +15,28 @@
       </div>
       <ion-card v-else class="mobile-card mx-2">
         <ion-card-content class="form-stack">
-          <div class="field-group">
-            <label class="field-label">Name</label>
-            <input v-model="user.name" class="form-control app-control" placeholder="Nama pengguna" />
+          <div class="field-group mb-2">
+            <label class="field-label">Nama Kontak</label>
+            <input v-model="user.name" class="form-control app-control" placeholder="Nama pelanggan / supplier" />
           </div>
-          <div class="field-group">
+          <div class="field-group mb-2">
+            <label class="field-label">Nomor WhatsApp / Telepon</label>
+            <input type="tel" v-model="user.phone" class="form-control app-control" placeholder="08123456789" />
+          </div>
+          <div class="field-group mb-2">
             <label class="field-label">Email</label>
-            <input type="email" v-model="user.email" class="form-control app-control" placeholder="user@example.com" />
+            <input type="email" v-model="user.email" class="form-control app-control" placeholder="kontak@example.com" />
           </div>
-          <ion-button expand="block" class="btn-action primary ion-margin-top" :disabled="saving" @click="saveUser">Save User</ion-button>
+          <div class="field-group mb-3">
+            <label class="field-label">Tipe Kontak</label>
+            <select v-model="user.role" class="form-select app-control">
+              <option value="Pelanggan">Pelanggan</option>
+              <option value="Supplier">Supplier / Pemasok</option>
+              <option value="Mitra">Mitra Usaha</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+          <ion-button expand="block" class="btn-action primary ion-margin-top" :disabled="saving || !user.name" @click="saveUser">Simpan Kontak</ion-button>
         </ion-card-content>
       </ion-card>
     </ion-content>
@@ -42,18 +55,25 @@ export default {
   components: { IonModal, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonSpinner, IonCard, IonCardContent, IonButtons, IonIcon },
   setup(props, { emit }) {
     const isEdit = ref(!!props.userId)
-    const user = ref({ name: '', email: '' })
+    const user = ref({ name: '', phone: '', email: '', role: 'Pelanggan' })
     const loading = ref(false)
     const saving = ref(false)
 
     const fetchUser = async () => {
       if (!props.userId) {
-          user.value = { name: '', email: '' }
+          user.value = { name: '', phone: '', email: '', role: 'Pelanggan' }
           return
       }
       loading.value = true
       try {
-        user.value = await UsersRepository.getById(parseInt(props.userId))
+        const found = await UsersRepository.getById(parseInt(props.userId))
+        user.value = {
+          name: '',
+          phone: '',
+          email: '',
+          role: 'Pelanggan',
+          ...found
+        }
       } finally {
         loading.value = false
       }

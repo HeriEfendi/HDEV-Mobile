@@ -4,14 +4,14 @@
       <ion-toolbar class="app-toolbar">
         <div class="app-hero">
           <div class="d-flex align-items-center justify-content-between">
-            <ion-title class="app-hero-title">Utang & Kewajiban</ion-title>
+            <ion-title class="app-hero-title">Utang & Piutang</ion-title>
             <ion-buttons slot="end">
               <ion-button class="btn-action primary" @click="openModal()">
-                <ion-icon slot="start" :icon="addOutline" /> Tambah Utang
+                <ion-icon slot="start" :icon="addOutline" /> Tambah Catatan
               </ion-button>
             </ion-buttons>
           </div>
-          <p class="app-hero-subtitle">Pantau kewajiban pembayaran, jatuh tempo, skema cicilan, serta status pelunasan utang.</p>
+          <p class="app-hero-subtitle">Pantau kewajiban utang usaha dan piutang kasbon pelanggan dalam satu tempat terpadu.</p>
         </div>
       </ion-toolbar>
 
@@ -224,6 +224,34 @@
 
         <!-- ==================== TAB 2: RIWAYAT & DETAIL ==================== -->
         <div v-show="activeTab === 'riwayat'" class="ion-padding">
+          <!-- Type Filter Chips (Semua / Piutang / Utang) -->
+          <div class="d-flex gap-2 mx-3 mb-2 overflow-x-auto pb-1">
+            <button 
+              type="button" 
+              class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+              :class="typeFilter === 'all' ? 'btn-primary' : 'btn-outline-secondary bg-white'"
+              @click="typeFilter = 'all'"
+            >
+              Semua ({{ debts.length }})
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+              :class="typeFilter === 'receivable' ? 'btn-success text-white' : 'btn-outline-secondary bg-white'"
+              @click="typeFilter = 'receivable'"
+            >
+              📥 Piutang Kasbon ({{ debts.filter(d => d.type === 'receivable').length }})
+            </button>
+            <button 
+              type="button" 
+              class="btn btn-sm fw-bold px-3 py-1 rounded-pill"
+              :class="typeFilter === 'payable' ? 'btn-primary text-white' : 'btn-outline-secondary bg-white'"
+              @click="typeFilter = 'payable'"
+            >
+              📤 Utang Saya ({{ debts.filter(d => (d.type || 'payable') === 'payable').length }})
+            </button>
+          </div>
+
           <!-- Filter & Search Controls -->
           <div class="mobile-card p-3 mb-3 mx-3 shadow-sm">
             <div class="row g-2 align-items-center">
@@ -267,9 +295,14 @@
                 <div>
                   <!-- Card Header: Status & Due Info -->
                   <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
-                    <span class="badge text-xs" :class="getStatusBadgeClass(debt)">
-                      {{ getStatusText(debt) }}
-                    </span>
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="badge text-xs" :class="debt.type === 'receivable' ? 'bg-success text-white' : 'bg-primary text-white'">
+                        {{ debt.type === 'receivable' ? '📥 Piutang' : '📤 Utang' }}
+                      </span>
+                      <span class="badge text-xs" :class="getStatusBadgeClass(debt)">
+                        {{ getStatusText(debt) }}
+                      </span>
+                    </div>
 
                     <span class="text-xs fw-semibold" :class="getDueDateColorClass(debt)">
                       <ion-icon :icon="calendarOutline" class="me-1 align-text-bottom" />
@@ -336,11 +369,21 @@
                     <!-- Primary Payment Button -->
                     <button 
                       class="btn btn-sm text-xs fw-bold px-2 py-1 flex-grow-1"
-                      :class="isDebtPaid(debt) ? 'btn-outline-secondary' : 'btn-primary'"
+                      :class="isDebtPaid(debt) ? 'btn-outline-secondary' : (debt.type === 'receivable' ? 'btn-success text-white' : 'btn-primary')"
                       @click="openPaymentModal(debt)"
                     >
                       <ion-icon :icon="cashOutline" class="me-1" />
-                      {{ isDebtPaid(debt) ? 'Riwayat Cicilan' : 'Bayar / Cicil' }}
+                      {{ isDebtPaid(debt) ? 'Riwayat' : (debt.type === 'receivable' ? 'Terima Pelunasan' : 'Bayar / Cicil') }}
+                    </button>
+
+                    <!-- WhatsApp Reminder for Receivables -->
+                    <button
+                      v-if="debt.type === 'receivable' && !isDebtPaid(debt)"
+                      class="btn btn-sm btn-outline-success text-xs fw-bold px-2 py-1"
+                      @click="remindViaWhatsApp(debt)"
+                      title="Kirim pengingat via WhatsApp"
+                    >
+                      <ion-icon :icon="logoWhatsapp" />
                     </button>
 
                     <!-- Quick Full Pay Toggle -->
@@ -467,9 +510,10 @@ import {
 import { 
   addOutline, trashOutline, createOutline, pencilOutline, 
   checkmarkCircleOutline, timeOutline, alertCircleOutline, walletOutline, 
-  calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline 
+  calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline, logoWhatsapp
 } from 'ionicons/icons'
 import { debtsRepo } from '../../../db/repositories'
+import { businessProfile } from '../../../db/businessProfile'
 import DebtModal from './DebtModal.vue'
 import DebtPaymentModal from './DebtPaymentModal.vue'
 
@@ -497,6 +541,7 @@ export default {
     // Filters & Search
     const searchQuery = ref('')
     const statusFilter = ref('all')
+    const typeFilter = ref('all')
     const sortBy = ref('dueDateAsc')
 
     const fetchAll = async () => {
@@ -751,6 +796,10 @@ export default {
           const matchNotes = (d.notes || '').toLowerCase().includes(q)
           if (!matchLender && !matchNotes) return false
         }
+        if (typeFilter.value !== 'all') {
+          const itemType = d.type || 'payable'
+          if (itemType !== typeFilter.value) return false
+        }
         if (statusFilter.value === 'unpaid') return !isDebtPaid(d)
         if (statusFilter.value === 'installment') return isPartiallyPaid(d)
         if (statusFilter.value === 'paid') return isDebtPaid(d)
@@ -870,12 +919,29 @@ export default {
       }
     })
 
+    const remindViaWhatsApp = (debt) => {
+      const store = businessProfile.value
+      const rem = getRemainingAmount(debt)
+      const dueDateStr = debt.dueDate ? formatDate(debt.dueDate) : 'secepatnya'
+      let msg = `Halo ${debt.lender},\n\nIni pengingat dari *${store.storeName}* terkait catatan kasbon sebesar *${formatPrice(rem)}* (jatuh tempo: ${dueDateStr}).\n`
+      if (debt.notes) msg += `Rincian: ${debt.notes}\n`
+      msg += `\nMohon konfirmasi atau pelunasan dapat diserahkan ke toko kami. Terima kasih banyak! 🙏`
+
+      let cleanPhone = (debt.phone || '').replace(/\D/g, '')
+      if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.slice(1)
+
+      const url = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`
+      window.open(url, '_blank')
+    }
+
     onMounted(fetchAll)
 
     return {
       activeTab, loading, debts, isModalOpen, selectedDebtId,
       isPaymentModalOpen, selectedDebtForPayment,
-      searchQuery, statusFilter, sortBy, filteredDebts,
+      searchQuery, statusFilter, typeFilter, sortBy, filteredDebts,
       summary, overdueDebtsCount, paidPercentage, scheduledDebts,
       topDebtsChartSeries, topDebtsChartOptions,
       statusDonutSeries, statusDonutOptions,
@@ -883,11 +949,11 @@ export default {
       fetchAll, openModal, openPaymentModal, onDelete, togglePaidStatus,
       isDebtPaid, isPartiallyPaid, getPaidAmount, getRemainingAmount, getProgressPercent,
       getCardBorderClass, getStatusBadgeClass, getStatusText, getDueDateColorClass,
-      getDueDateCountdown, getScheduleLabel,
+      getDueDateCountdown, getScheduleLabel, remindViaWhatsApp,
       formatPrice, formatDate,
       addOutline, trashOutline, createOutline, pencilOutline,
       walletOutline, alertCircleOutline, checkmarkCircleOutline, timeOutline,
-      calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline
+      calendarOutline, checkmarkDoneOutline, closeCircleOutline, cashOutline, logoWhatsapp
     }
   }
 }
