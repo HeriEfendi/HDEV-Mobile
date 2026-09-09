@@ -909,10 +909,10 @@ export default {
       })
 
       return {
-        chart: { toolbar: { show: false } },
+        chart: { type: 'area', toolbar: { show: false } },
         colors: ['#6366f1'],
         stroke: { curve: 'smooth', width: 3 },
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05 } },
+        fill: { type: 'gradient', colors: ['#6366f1'], gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05 } },
         xaxis: { categories: Object.keys(monthMap) },
         yaxis: { labels: { formatter: (val) => 'Rp' + (val / 1000).toLocaleString('id-ID') + 'k' } },
         tooltip: { y: { formatter: (val) => formatPrice(val) } }

@@ -1368,13 +1368,13 @@ export default {
             return val > 0 ? `${h}.${String(m).padStart(2, '0')}` : '';
           },
           offsetY: -20,
-          style: { fontSize: '10px', colors: ['#303030'] }
+          style: { fontSize: '10px', colors: '#303030' }
         },
         xaxis: {
           categories: weeklyChartSeries.value.labels,
-          labels: { style: { colors: ['#64748b'], fontWeight: 600 } }
+          labels: { style: { colors: '#64748b', fontWeight: 600 } }
         },
-        yaxis: { labels: { style: { colors: ['#64748b'] } }, title: { text: 'Jam', style: { color: '#64748b' } } },
+        yaxis: { labels: { style: { colors: '#64748b' } }, title: { text: 'Jam', style: { color: '#64748b' } } },
         grid: { borderColor: '#e2e8f0', strokeDashArray: 4 }
       };
     });
@@ -1442,11 +1442,11 @@ export default {
             }
             return `${weekStart.getDate()} - ${weekEnd.getDate()}`;
           }),
-          labels: { style: { colors: ['#64748b'], fontWeight: 600 } }
+          labels: { style: { colors: '#64748b', fontWeight: 600 } }
         },
         yaxis: {
           labels: { 
-            style: { colors: ['#64748b'] },
+            style: { colors: '#64748b' },
             formatter: (val) => val.toFixed(0)
           }
         },

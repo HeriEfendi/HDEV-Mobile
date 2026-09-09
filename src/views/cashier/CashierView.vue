@@ -1171,14 +1171,16 @@ export default {
       return {
         chart: {
           id: 'sales-trend',
+          type: 'area',
           toolbar: { show: false },
           sparkline: { enabled: false },
           zoom: { enabled: false }
         },
         dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 3, colors: ['#6366f1'] },
+        stroke: { curve: 'smooth', width: 3 },
         fill: {
           type: 'gradient',
+          colors: ['#6366f1'],
           gradient: {
             shadeIntensity: 1,
             opacityFrom: 0.45,
@@ -1188,12 +1190,12 @@ export default {
         },
         xaxis: {
           categories: categoriesData,
-          labels: { style: { colors: ['#64748b'], fontWeight: 600 } }
+          labels: { style: { colors: '#64748b', fontWeight: 600 } }
         },
         yaxis: {
           labels: {
             formatter: (val) => new Intl.NumberFormat('id-ID', { notation: 'compact', compactDisplay: 'short' }).format(val),
-            style: { colors: ['#64748b'], fontWeight: 600 }
+            style: { colors: '#64748b', fontWeight: 600 }
           }
         },
         tooltip: {

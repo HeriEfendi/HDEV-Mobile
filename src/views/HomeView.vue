@@ -445,7 +445,7 @@ export default {
         updateCount('/users', allUsers.length)
 
         const {
-          savingAccountsRepo, ProductRepository, salesRepo,
+          savingAccountsRepo, stockMutationsRepo, ProductRepository, salesRepo,
           expensesRepo, incomesRepo, debtsRepo, CategoryRepository
         } = await import('../db/repositories')
 
@@ -463,13 +463,29 @@ export default {
         }, 0)
 
         const allDebts = await debtsRepo.getAll().catch(() => [])
-        const dueDebts = allDebts.filter(d => {
-          if (d.status === 'Lunas' || d.status === 'Paid') return false
+        const activeDebts = allDebts.filter(d => d.status !== 'Lunas' && d.status !== 'Paid')
+        const dueDebts = activeDebts.filter(d => {
           if (!d.dueDate) return false
           const diffMs = new Date(d.dueDate).getTime() - new Date().getTime()
           const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
           return diffDays <= 7
         })
+
+        const allCategories = await CategoryRepository.getAll().catch(() => [])
+        const allExpenses = await expensesRepo.getAll().catch(() => [])
+        const allIncomes = await incomesRepo.getAll().catch(() => [])
+        const allSavingAccounts = await savingAccountsRepo.getAll().catch(() => [])
+        const allStockMutations = await stockMutationsRepo.getAll().catch(() => [])
+
+        // Update counts for menu items
+        updateCount('/categories', allCategories.length)
+        updateCount('/debts', allDebts.length)
+        updateCount('/incomes', allIncomes.length)
+        updateCount('/products', allProducts.length)
+        updateCount('/savings', allSavingAccounts.length)
+        updateCount('/cashier', allSales.length)
+        updateCount('/expenses', allExpenses.length)
+        updateCount('/stock', allStockMutations.length)
 
         kpi.value = {
           salesToday,
